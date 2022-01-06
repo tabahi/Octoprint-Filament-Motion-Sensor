@@ -100,7 +100,4 @@ G1 Z2.0 F3000 ; Move Z Axis up little to prevent scratching of Heat Bed
 Support of multiple sensors for multiextruders like 4 channel kraken hotend
 
 ## News
-Development and support pause till summer 2021 due to a lack of time
-
-## Contact
-[![PayPal](https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=AHS3MUTFXXMNG "Donate for Octoprint Smart-Filament-Sensor Plugin")
+2022: Currently no further development, feel free to continue development in personal forks
