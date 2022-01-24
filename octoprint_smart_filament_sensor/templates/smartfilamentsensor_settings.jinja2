@@ -28,13 +28,14 @@
             <label class="control-label">{{ _('Pause command:') }}</label>
             <div class="controls" data-toggle="tooltip" title="{{ _('The pause command that is sent to the printer') }}">
                 <select class="select-mini" data-bind="value: settingsViewModel.settings.plugins.smartfilamentsensor.pause_command">
-                    <option value="@pause">{{ _('@pause - Octoprint Pause') }}</option>                
                     <option value="M0">{{ _('M0 - Stop') }}</option>
                     <option value="M1">{{ _('M1 - Sleep') }}</option>
                     <option value="M25">{{ _('M25 - Pause SD Print') }}</option>
                     <option value="M226">{{ _('M226 - G-Code Pause') }}</option>
                     <option value="M600">{{ _('M600 - Filament Change') }}</option>
                     <option value="M601">{{ _('M601 - Pause print') }}</option>
+                    <option value="@pause">{{ _('@pause - Octoprint Pause') }}</option>         
+                    <option value="@cancel">{{ _('@cancel - Octoprint Cancel') }}</option>
                 </select>
                 <span class="help-block"><small>Before selecting a pause command check if your firmware supports it!</small></span>
             </div>
