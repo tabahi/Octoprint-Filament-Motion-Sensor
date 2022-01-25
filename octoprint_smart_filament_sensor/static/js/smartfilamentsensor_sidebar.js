@@ -52,7 +52,7 @@ $(function(){
             }
             
             var message = JSON.parse(data);
-            self.remainingDistance(message["_remaining_distance"]);
+            self.remainingDistance( Math.round(message["_remaining_distance"]) );
             self.lastMotionDetected((new Date((message["_last_motion_detected"] * 1000))).toString());
 
             if(message["_filament_moving"] == true){
