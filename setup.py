@@ -15,20 +15,20 @@ plugin_package = "octoprint_smart_filament_sensor"
 plugin_name = "Octoprint-Smart-Filament-Sensor"
 
 # The plugin's version. Can be overwritten within OctoPrint's internal data via __plugin_version__ in the plugin module
-plugin_version = "1.1.5.3"
+plugin_version = "1.1.6"
 
 # The plugin's description. Can be overwritten within OctoPrint's internal data via __plugin_description__ in the plugin
 # module
 plugin_description = "A plugin to directly add Smart Filament Sensors like BigTreeTech Smart Filament Sensor to Octoprint."
 
 # The plugin's author. Can be overwritten within OctoPrint's internal data via __plugin_author__ in the plugin module
-plugin_author = "Anni Lange"
+plugin_author = Royrdan"
 
 # The plugin's author's mail address.
-plugin_author_email = "maocypher@gmail.com"
+plugin_author_email = "transperancymedia@gmail.com"
 
 # The plugin's homepage URL. Can be overwritten within OctoPrint's internal data via __plugin_url__ in the plugin module
-plugin_url = "https://github.com/maocypher/Octoprint-Smart-Filament-Sensor"
+plugin_url = "https://github.com/royrdan/Octoprint-Smart-Filament-Sensor"
 
 # The plugin's license. Can be overwritten within OctoPrint's internal data via __plugin_license__ in the plugin module
 plugin_license = "AGPLv3"
