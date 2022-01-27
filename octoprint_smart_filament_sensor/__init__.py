@@ -345,7 +345,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 
                 # version check: github repository
                 type="github_release",
-                user="maocypher",
+                user="Royrdan",
                 repo="Octoprint-Smart-Filament-Sensor",
                 current=self._plugin_version,
 
@@ -366,7 +366,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 				],
 
                 # update method: pip
-                pip="https://github.com/maocypher/Octoprint-Smart-Filament-Sensor/archive/{target_version}.zip"
+                pip="https://github.com/royrdan/Octoprint-Smart-Filament-Sensor/archive/{target_version}.zip"
             )
         )
 
