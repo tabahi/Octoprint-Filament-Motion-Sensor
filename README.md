@@ -95,9 +95,3 @@ G1 Z2.0 F3000 ; Move Z Axis up little to prevent scratching of Heat Bed
 ## Disclaimer
 * I as author of this plugin am not responsible for any damages on your print or printer. As user you are responsible for a sensible usage of this plugin.
 * Be cautious not to damage your Raspberry Pi, because of wrong voltage. I don't take any responsibility for wrong wiring.
-
-## Outlook
-Support of multiple sensors for multiextruders like 4 channel kraken hotend
-
-## News
-2022: Currently no further development, feel free to continue development in personal forks
