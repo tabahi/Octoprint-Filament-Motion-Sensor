@@ -366,7 +366,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 				],
 
                 # update method: pip
-                pip="https://github.com/royrdan/Octoprint-Smart-Filament-Sensor/archive/{target_version}.zip"
+                pip="https://github.com/Royrdan/Octoprint-Smart-Filament-Sensor/archive/{target_version}.zip"
             )
         )
 
