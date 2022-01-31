@@ -22,7 +22,7 @@ plugin_version = "1.1.6"
 plugin_description = "A plugin to directly add Smart Filament Sensors like BigTreeTech Smart Filament Sensor to Octoprint."
 
 # The plugin's author. Can be overwritten within OctoPrint's internal data via __plugin_author__ in the plugin module
-plugin_author = Royrdan"
+plugin_author = "Royrdan"
 
 # The plugin's author's mail address.
 plugin_author_email = "transperancymedia@gmail.com"
