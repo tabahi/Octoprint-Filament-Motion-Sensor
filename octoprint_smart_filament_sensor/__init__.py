@@ -150,7 +150,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
     def start_connection_test(self):
         CONNECTION_TEST_TIME = 2
         if(self.motion_sensor_thread == None):
-            self.motion_sensor_thread = FilamentMotionSensorTimeoutDetection(1, "ConnectionTest", self.motion_sensor_pin, 
+            self.motion_sensor_thread = FilamentMotionSensorTimeoutDetection(1, "ConnectionTest", self.motion_sensor_pin,
                 CONNECTION_TEST_TIME, self._logger, self._data, pCallback=self.connectionTestCallback)
             self.motion_sensor_thread.start()
             self._data.connection_test_running = True
@@ -159,7 +159,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
     # Starts the motion sensor if the sensors are enabled
     def motion_sensor_start(self):
         self._logger.debug("Sensor enabled: " + str(self.motion_sensor_enabled))
-        
+
         if self.motion_sensor_enabled:
             if (self.mode == 0):
                 self._logger.debug("GPIO mode: Board Mode")
@@ -167,7 +167,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
                 self._logger.debug("GPIO mode: BCM Mode")
             self._logger.debug("GPIO pin: " + str(self.motion_sensor_pin))
 
-            # Distance detection            
+            # Distance detection
             if (self.detection_method == 1):
                 self._logger.info("Motion sensor started: Distance detection")
                 self._logger.debug("Detection Mode: Distance detection")
@@ -180,7 +180,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
                     self._logger.debug("Timeout: " + str(self.motion_sensor_max_not_moving))
 
                     # Start Timeout_Detection thread
-                    self.motion_sensor_thread = FilamentMotionSensorTimeoutDetection(1, "MotionSensorTimeoutDetectionThread", self.motion_sensor_pin, 
+                    self.motion_sensor_thread = FilamentMotionSensorTimeoutDetection(1, "MotionSensorTimeoutDetectionThread", self.motion_sensor_pin,
                         self.motion_sensor_max_not_moving, self._logger, self._data, pCallback=self.printer_change_filament)
                     self.motion_sensor_thread.start()
                     self._logger.info("Motion sensor started: Timeout detection")
@@ -201,7 +201,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
         # Check if stop signal was already sent
         if(not self.send_code):
             self._logger.debug("Motion sensor detected no movement")
-            self._logger.info("Pause command: " + self.pause_command)   
+            self._logger.info("Pause command: " + self.pause_command)
             self._printer.commands(self.pause_command)
             self.send_code = True
             self._data.filament_moving = False
@@ -228,34 +228,54 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
     # Calculate the remaining distance
     def calc_distance(self, pE):
         if (self.detection_method == 1):
-            # Only with absolute extrusion the delta distance must be calculated
-            if (self._data.absolut_extrusion):
-                # LastE is not used and set to the same value as currentE
-                if (self.lastE == -1):
-                    self.lastE = pE
-                else:
-                    self.lastE = self.currentE
-                self.currentE = pE
 
-                self._logger.debug("LastE: " + str(self.lastE) + "; CurrentE: " + str(self.currentE))
-
-            self._logger.debug("Remaining Distance: " + str(self._data.remaining_distance))
-
+            # First check if need continue after last move
             if(self._data.remaining_distance > 0):
-                # Calculate the remaining distance from detection distance
-                # currentE - lastE is the delta distance
-                if(self._data.absolut_extrusion):
+
+                # Calculate deltaDistance if absolute extrusion
+                if (self._data.absolut_extrusion):
+                    # LastE is not used and set to the same value as currentE
+                    if (self.lastE == -1):
+                        self.lastE = pE
+                    else:
+                        self.lastE = self.currentE
+
+                    self.currentE = pE
+
                     deltaDistance = self.currentE - self.lastE
-                # With relative extrusion the current extrusion value is the delta distance
+
+                    self._logger.debug(
+                        "CurrentE: {currentE} - LastE: {lastE} = {extruded}".format(
+                            currentE = str(self.currentE),
+                            lastE = str(self.lastE),
+                            extruded = str(round(deltaDistance,3))
+                        )
+                    )
+
+                # deltaDistance is just position if relative extrusion
                 else:
                     deltaDistance = float(pE)
+                    self._logger.debug(
+                        "Relative Extrusion = {extruded}".format(
+                            extruded = str(round(deltaDistance,3))
+                        )
+                    )
+
                 if(deltaDistance > self.motion_sensor_detection_distance):
                     # Calculate the deltaDistance modulo the motion_sensor_detection_distance
                     # Sometimes the polling of M114 is inaccurate so that with the next poll
                     # very high distances are put back followed by zero distance changes
+
+                    #deltaDistance=deltaDistance / self.motion_sensor_detection_distance REMAINDER
                     deltaDistance = deltaDistance % self.motion_sensor_detection_distance
 
-                self._logger.debug("Delta Distance: " + str(deltaDistance))
+                self._logger.debug(
+                    "Remaining: {remaining} - Extruded: {extruded} = {new_remaining}".format(
+                        remaining = str(self._data.remaining_distance),
+                        extruded = str(deltaDistance),
+                        new_remaining = str(self._data.remaining_distance - deltaDistance)
+                    )
+                )
                 self._data.remaining_distance = (self._data.remaining_distance - deltaDistance)
 
             else:
@@ -275,7 +295,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             self.motion_sensor_stop_thread()
 
 # Events
-    def on_event(self, event, payload):     
+    def on_event(self, event, payload):
         if event is Events.PRINT_STARTED:
             self.stop_connection_test()
             self.print_started = True
@@ -297,7 +317,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
                 self.motion_sensor_start()
 
                 # Set print_started to False to prevent that the starting command is called multiple times
-                self.print_started = False         
+                self.print_started = False
 
         # Disable sensor
         elif event in (
@@ -314,7 +334,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
         # Disable motion sensor if paused
         elif event is Events.PRINT_PAUSED:
             self.print_paused(event)
-        
+
         elif event is Events.USER_LOGGED_IN:
             self.updateToUi()
 
@@ -383,24 +403,25 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
                 for command in commands:
                     if command.startswith("E"):
                         extruder = command[1:]
+                        self._logger.debug("----- RUNNING calc_distance -----")
+                        self._logger.debug("Found extrude command in '" + commands + "' with value: " + extruder)
                         self.calc_distance(float(extruder))
-                        self._logger.debug("E: " + extruder)
 
             # G92 reset extruder
             elif(gcode == "G92"):
                 if(self.detection_method == 1):
                     self.init_distance_detection()
-                self._logger.debug("G92: Reset Extruders")
+                self._logger.debug("Found G92 command in '" + command + "' : Reset Extruders")
 
             # M82 absolut extrusion mode
             elif(gcode == "M82"):
                 self._data.absolut_extrusion = True
-                self._logger.info("M82: Absolut extrusion")
+                self._logger.info("Found M82 command in '" + command + "' : Absolut extrusion")
 
             # M83 relative extrusion mode
             elif(gcode == "M83"):
                 self._data.absolut_extrusion = False
-                self._logger.info("M83: Relative extrusion")
+                self._logger.info("Found M83 command in '" + command + "' : Relative extrusion")
 
         return cmd
 
