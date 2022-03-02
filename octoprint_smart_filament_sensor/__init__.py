@@ -411,17 +411,17 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             elif(gcode == "G92"):
                 if(self.detection_method == 1):
                     self.init_distance_detection()
-                self._logger.debug("Found G92 command in '" + command + "' : Reset Extruders")
+                self._logger.debug("Found G92 command in '" + gcode + "' : Reset Extruders")
 
             # M82 absolut extrusion mode
             elif(gcode == "M82"):
                 self._data.absolut_extrusion = True
-                self._logger.info("Found M82 command in '" + command + "' : Absolut extrusion")
+                self._logger.info("Found M82 command in '" + gcode + "' : Absolut extrusion")
 
             # M83 relative extrusion mode
             elif(gcode == "M83"):
                 self._data.absolut_extrusion = False
-                self._logger.info("Found M83 command in '" + command + "' : Relative extrusion")
+                self._logger.info("Found M83 command in '" + gcode + "' : Relative extrusion")
 
         return cmd
 
