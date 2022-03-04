@@ -205,6 +205,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             self._printer.commands(self.pause_command)
             self.send_code = True
             self._data.filament_moving = False
+            self.lastE = -1
 
     # Reset the distance, if the remaining distance is smaller than the new value
     def reset_distance (self, pPin):
@@ -404,7 +405,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
                     if command.startswith("E"):
                         extruder = command[1:]
                         self._logger.debug("----- RUNNING calc_distance -----")
-                        self._logger.debug("Found extrude command in '" + commands + "' with value: " + extruder)
+                        self._logger.debug("Found extrude command in '" + gcode + "' with value: " + extruder)
                         self.calc_distance(float(extruder))
 
             # G92 reset extruder
@@ -427,7 +428,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = "Smart Filament Sensor"
-__plugin_version__ = "1.1.5.3"
+__plugin_version__ = "1.1.6.2"
 __plugin_pythoncompat__ = ">=2.7,<4"
 
 def __plugin_load__():
