@@ -405,7 +405,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
                     if command.startswith("E"):
                         extruder = command[1:]
                         self._logger.debug("----- RUNNING calc_distance -----")
-                        self._logger.debug("Found extrude command in '" + gcode + "' with value: " + extruder)
+                        self._logger.debug("Found extrude command in '" + cmd + "' with value: " + extruder)
                         self.calc_distance(float(extruder))
 
             # G92 reset extruder
