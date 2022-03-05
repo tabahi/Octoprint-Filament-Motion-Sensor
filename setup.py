@@ -15,7 +15,7 @@ plugin_package = "octoprint_smart_filament_sensor"
 plugin_name = "Octoprint-Smart-Filament-Sensor"
 
 # The plugin's version. Can be overwritten within OctoPrint's internal data via __plugin_version__ in the plugin module
-plugin_version = "1.1.6.3"
+plugin_version = "1.1.6.3.1"
 
 # The plugin's description. Can be overwritten within OctoPrint's internal data via __plugin_description__ in the plugin
 # module
