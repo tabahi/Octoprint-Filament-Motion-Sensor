@@ -243,15 +243,26 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 
                     self.currentE = pE
 
-                    deltaDistance = self.currentE - self.lastE
+                    # Only update deltaDistance if it was an extrusion not a retraction
+                    if self.currentE - self.lastE > 0:
+                        deltaDistance = self.currentE - self.lastE
 
-                    self._logger.debug(
-                        "CurrentE: {currentE} - LastE: {lastE} = {extruded}".format(
-                            currentE = str(self.currentE),
-                            lastE = str(self.lastE),
-                            extruded = str(round(deltaDistance,3))
+                        self._logger.debug(
+                            "CurrentE: {currentE} - LastE: {lastE} = {extruded}".format(
+                                currentE = str(self.currentE),
+                                lastE = str(self.lastE),
+                                extruded = str(round(deltaDistance,3))
+                            )
                         )
-                    )
+                    else:
+                        deltaDistance = 0
+                        self._logger.debug(
+                            "Ignoring Retraction CurrentE: {currentE} - LastE: {lastE} = {extruded}".format(
+                                currentE = str(self.currentE),
+                                lastE = str(self.lastE),
+                                extruded = str(round(deltaDistance,3))
+                            )
+                        )
 
                 # deltaDistance is just position if relative extrusion
                 else:
@@ -418,17 +429,19 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             elif(gcode == "M82"):
                 self._data.absolut_extrusion = True
                 self._logger.info("Found M82 command in '" + cmd + "' : Absolut extrusion")
+                self.lastE = 0
 
             # M83 relative extrusion mode
             elif(gcode == "M83"):
                 self._data.absolut_extrusion = False
                 self._logger.info("Found M83 command in '" + cmd + "' : Relative extrusion")
+                self.lastE = 0
 
         return cmd
 
 
 __plugin_name__ = "Smart Filament Sensor"
-__plugin_version__ = "1.1.6.4"
+__plugin_version__ = "1.1.6.5"
 __plugin_pythoncompat__ = ">=2.7,<4"
 
 def __plugin_load__():
