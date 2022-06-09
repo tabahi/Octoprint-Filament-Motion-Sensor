@@ -25,7 +25,7 @@ This plugin can use the GPIO.BOARD or GPIO.BCM numbering scheme.
 ## Installation
 
 * Install via the bundled [Plugin Manager](https://github.com/foosel/OctoPrint/wiki/Plugin:-Plugin-Manager).
-* Manually using this URL: https://github.com/maocypher/Octoprint-Smart-Filament-Sensor/archive/master.zip
+* Manually using this URL: https://github.com/Royrdan/Octoprint-Smart-Filament-Sensor/archive/master.zip
 
 After installation a restart of Octoprint is recommended.
 
