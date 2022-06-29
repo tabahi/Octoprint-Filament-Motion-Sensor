@@ -4,6 +4,7 @@ import octoprint.plugin
 from octoprint.events import Events
 import RPi.GPIO as GPIO
 from time import sleep
+from datetime import datetime
 import flask
 import json
 from octoprint_smart_filament_sensor.filament_motion_sensor_timeout_detection import FilamentMotionSensorTimeoutDetection
@@ -23,6 +24,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
         GPIO.setwarnings(False)        # Disable GPIO warnings
 
         self.print_started = False
+        self.last_movement_time = None
         self.lastE = -1
         self.currentE = -1
         self.START_DISTANCE_OFFSET = 7
@@ -72,7 +74,6 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 # Initialization methods
     def _setup_sensor(self):
         # Clean up before intializing again, because ports could already be in use
-        GPIO.cleanup()
 
         if(self.mode == 0):
             self._logger.info("Using Board Mode")
@@ -200,17 +201,18 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
     def printer_change_filament (self):
         # Check if stop signal was already sent
         if(not self.send_code):
-            self._logger.debug("Motion sensor detected no movement")
+            self._logger.error("Motion sensor detected no movement")
             self._logger.info("Pause command: " + self.pause_command)
             self._printer.commands(self.pause_command)
             self.send_code = True
             self._data.filament_moving = False
-            self.lastE = -1
+            self.lastE = -1 # Set to -1 so it ignores the first test then continues
 
     # Reset the distance, if the remaining distance is smaller than the new value
     def reset_distance (self, pPin):
         self._logger.debug("Motion sensor detected movement")
         self.send_code = False
+        self.last_movement_time = datetime.now()
         if(self._data.remaining_distance < self.motion_sensor_detection_distance):
             self._data.remaining_distance = self.motion_sensor_detection_distance
             self._data.filament_moving = True
@@ -235,43 +237,22 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 
                 # Calculate deltaDistance if absolute extrusion
                 if (self._data.absolut_extrusion):
-                    # LastE is not used and set to the same value as currentE
-                    if (self.lastE == -1):
+                    # LastE is not used and set to the same value as currentE. Occurs on first run or after resuming
+                    if (self.lastE < 0):
+                        self._logger.info(f"Ignoring run with a negative value. Setting LastE to PE: {self.lastE} = {pE}")
                         self.lastE = pE
                     else:
                         self.lastE = self.currentE
 
                     self.currentE = pE
 
-                    # Only update deltaDistance if it was an extrusion not a retraction
-                    if self.currentE - self.lastE > 0:
-                        deltaDistance = self.currentE - self.lastE
-
-                        self._logger.debug(
-                            "CurrentE: {currentE} - LastE: {lastE} = {extruded}".format(
-                                currentE = str(self.currentE),
-                                lastE = str(self.lastE),
-                                extruded = str(round(deltaDistance,3))
-                            )
-                        )
-                    else:
-                        deltaDistance = 0
-                        self._logger.debug(
-                            "Ignoring Retraction CurrentE: {currentE} - LastE: {lastE} = {extruded}".format(
-                                currentE = str(self.currentE),
-                                lastE = str(self.lastE),
-                                extruded = str(round(deltaDistance,3))
-                            )
-                        )
+                    deltaDistance = self.currentE - self.lastE
+                    self._logger.debug( f"CurrentE: {self.currentE} - LastE: {self.lastE} = { round(deltaDistance,3) }" )
 
                 # deltaDistance is just position if relative extrusion
                 else:
                     deltaDistance = float(pE)
-                    self._logger.debug(
-                        "Relative Extrusion = {extruded}".format(
-                            extruded = str(round(deltaDistance,3))
-                        )
-                    )
+                    self._logger.debug( f"Relative Extrusion = { round(deltaDistance,3) }" )
 
                 if(deltaDistance > self.motion_sensor_detection_distance):
                     # Calculate the deltaDistance modulo the motion_sensor_detection_distance
@@ -282,16 +263,16 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
                     deltaDistance = deltaDistance % self.motion_sensor_detection_distance
 
                 self._logger.debug(
-                    "Remaining: {remaining} - Extruded: {extruded} = {new_remaining}".format(
-                        remaining = str(self._data.remaining_distance),
-                        extruded = str(deltaDistance),
-                        new_remaining = str(self._data.remaining_distance - deltaDistance)
-                    )
+                    f"Remaining: {self._data.remaining_distance} - Extruded: {deltaDistance} = {self._data.remaining_distance - deltaDistance}"
                 )
                 self._data.remaining_distance = (self._data.remaining_distance - deltaDistance)
 
             else:
-                self.printer_change_filament()
+                # Only pause the print if its been over 5 seconds since the last movement. Stops pausing when the CPU gets hung up.
+                if (datetime.now() - self.last_movement_time).total_seconds() > 10:
+                    self.printer_change_filament()
+                else:
+                    self._logger.debug("Ignored pause command due to 5 second rule")
 
     def updateToUi(self):
         self._plugin_manager.send_plugin_message(self._identifier, self._data.toJSON())
@@ -441,7 +422,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = "Smart Filament Sensor"
-__plugin_version__ = "1.1.7"
+__plugin_version__ = "1.2"
 __plugin_pythoncompat__ = ">=2.7,<4"
 
 def __plugin_load__():
