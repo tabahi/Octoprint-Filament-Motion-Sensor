@@ -1,4 +1,10 @@
-# Octoprint-Smart-Filament-Sensor
+# Octoprint-Smart-Filament-Sensor (Updating... 2024-08-07)
+
+Main updates:
+- Removed RPi.GPIO requirements, replaced it with libgpiod.
+- Only one mode that uses both the distance and the timeout together.
+- No more pin mode confusion.
+
 
 [OctoPrint](http://octoprint.org/) plugin that lets integrate Smart Filament Sensors like BigTreeTechs SmartFilamentSensor directly to RaspberryPi GPIO pins. This enables that this sensor can also be used on 3D Printers, that do not have a E0-Stop like e.g. Creality 1.1.4 Mainboard of Ender 3.
 

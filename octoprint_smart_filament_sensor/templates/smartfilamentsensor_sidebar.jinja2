@@ -2,19 +2,20 @@
    <div class="controls form-inline">
        <label class="control-label">{{ _('Sensor enabled:') }} <span data-bind="text: getSensorEnabledString()"></span></label>
     </div>
-    <div class="controls form-inline">
-       <label class="control-label">{{ _('Detection mode:') }} <span data-bind="text: getDetectionMethodString()"></span></label>
-    </div>
    <div class="controls form-inline">
        <label class="control-label">{{ _('Filament is moving:') }} <span data-bind="text: isFilamentMoving"></span></label>
     </div>
     <div class="controls form-inline">
-       <label class="control-label" data-bind="visible: getDetectionMethodBoolean()">{{ _('Remaining distance:') }} <span data-bind="text: remainingDistance"></span></label>
+       <label class="control-label" data-bind="visible: 1">{{ _('Remaining distance:') }} <span data-bind="text: remainingDistance"></span></label>
     </div>
     <div class="controls form-inline">
-       <label class="control-label" data-bind="visible: !getDetectionMethodBoolean()">{{ _('Last motion detected:') }} <span data-bind="text: lastMotionDetected"></span></label>
+       <label class="control-label" data-bind="visible: 1">{{ _('Last motion detected:') }} <span data-bind="text: lastMotionDetected"></span></label>
    </div>
+   
+    <div class="controls form-inline">
+       <label class="control-label" data-bind="visible: 1">{{ _('Status:') }} <span data-bind="text: StatusFlagText"></span></label>
+    </div>
    <div class="controls form-inline">
-       <label class="control-label">{{ _('Connection Test is running:') }} <span data-bind="text: isConnectionTestRunning"></span></label>
+       <label class="control-label" data-bind="visible: isConnectionTestRunningBool">{{ _('Connection Test is running:') }} <span data-bind="text: isConnectionTestRunningBool"></span></label>
    </div>
 </div>

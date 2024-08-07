@@ -2,28 +2,10 @@
     <h4>{{ _('Smart Filament Sensor') }}</h4>
     <form class="form-horizontal">
     <!-- General -->
-        <div class="alert alert-primary">With V1.1.2 of the plugin, the Distance Detection was improved. 
-        It is recommended to use the distance detection as it is more accurate than the timeout detection.</div>
+        <div class="alert alert-primary">With V2.1 of the plugin, the dependency on RPi.GPIO is replaced by libgpiod. It should work with the latest Raspbian OS (Bookworm) but likely to have problems with the older versions.</div>
         <h6>{{ _('General') }}</h6>
-        <div class="control-group">
-            <label class="control-label">{{ _('Board Pin Mode:') }}</label>
-            <div class="controls" data-toggle="tooltip" title="{{ _('RPi pins numbered in Board mode or BCM mode?') }}">
-                <select class="select-mini" data-bind="value: settingsViewModel.settings.plugins.smartfilamentsensor.mode">
-                    <option value=0>{{ _('Board Mode') }}</option>
-                    <option value=1>{{ _('BCM Mode') }}</option>
-                </select>
-            </div>
-        </div>
-        <!-- Configuration for detection method -->
-        <div class="control-group">
-            <label class="control-label">{{ _('Detection Method:') }}</label>
-            <div class="controls" data-toggle="tooltip" title="{{ _('The method to detect if filament movement stopped') }}">
-                <select class="select-mini" data-bind="value: settingsViewModel.settings.plugins.smartfilamentsensor.detection_method">
-                    <option value=0>{{ _('Timeout detection') }}</option>
-                    <option value=1>{{ _('Distance detection') }}</option>
-                </select>
-            </div>
-        </div>
+        
+        
         <div class="control-group">
             <label class="control-label">{{ _('Pause command:') }}</label>
             <div class="controls" data-toggle="tooltip" title="{{ _('The pause command that is sent to the printer') }}">
@@ -46,6 +28,7 @@
             <div class="controls" data-toggle="tooltip" title="{{ _('Which Raspberry Pi GPIO pin your switch is attached to (-1 disables the plugin)') }}">
                 <input type="text" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.smartfilamentsensor.motion_sensor_pin">
             </div>
+            <span class="help-block"><small>Refer to <a href="https://pinout.xyz/ ">pinout.xyz</a> for BCM pinout. Use the number after GPIO-?. e.g. GPIO 21 is the last pin. Prefer 17.</small></span>
         </div>
         <!-- Enable / Disable detection -->
         <div class="control-group">
@@ -55,36 +38,53 @@
                 </label>
             </div>
         </div>
-        <!-- Timeout detection -->
-        <h6>{{ _('Timeout detection') }}</h6>
+        <h6>{{ _('Limits') }}</h6>
+
+        
+        <!-- Timeout regardless of Extrusion-->
         <div class="control-group">
-            <label class="control-label">{{ _('Detection time:') }}</label>
+            <label class="control-label">{{ _('No movement max timeout:') }}</label>
             <div class="controls">
                 <div class="input-append" data-toggle="tooltip" title="{{ _('When a sensor state change happens, wait for this amount of time to wait for the signal to stabilize.') }}">
                     <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.smartfilamentsensor.motion_sensor_max_not_moving">
                     <span class="add-on">sec</span>
                 </div>
-                <span class="help-block"><small>Don't choose the timeout value too small. During long slow movements, it takes some time until the sensor changes the value.</small></span>
+                <span class="help-block"><small>This is the timeout for no filament movement regardless of the extrusions in G-CODE. It's possible that the GCode doesn't extrude intentionally during temperature changes so keep this value big enough. After this the pause or stop command is initiated.</small></span>
             </div>
         </div>
 
-        <!-- Distance detection -->
-        <h6>{{ _('Distance detection') }}</h6>
+        <!-- No Extrusion Distance Limit -->
+        
         <div class="control-group">
-            <label class="control-label">{{ _('Detection distance:') }}</label>
+            <label class="control-label">{{ _('No movement max extrusion distance:') }}</label>
             <div class="controls">
                 <div class="input-append" data-toggle="tooltip" title="{{ _('The distance that is allowed to be passed without chaning the sesnor status.') }}">
                     <!--<input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: distanceDetectionDistance">-->
                     <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.smartfilamentsensor.motion_sensor_detection_distance">
                     <span class="add-on">mm</span>
                 </div>
-                <span class="help-block"><small>GCode commands that are sent to the printer are interpreted. Don't choose this value too small, because it could make the detection too sensitive.</small></span>
+                <span class="help-block"><small> Max allowed extrusion (in G-code) after no filament movement is detected by the sensor. <i>= Expected extrusion - actual extrusion</i></small></span>
             </div>
         </div>
+
+
+        <!-- Grace timeout after No Extrusion Distance Limit -->
+        <div class="control-group">
+            <label class="control-label">{{ _('Grace timeout after max extrusion limit reached:') }}</label>
+            <div class="controls">
+                <div class="input-append" data-toggle="tooltip" title="{{ _('When a sensor state change happens, wait for this amount of time to wait for the signal to stabilize.') }}">
+                    <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.smartfilamentsensor.motion_sensor_max_not_moving_after_dist">
+                    <span class="add-on">sec</span>
+                </div>
+                <span class="help-block"><small>Grace period after the <i>No movement max extrusion distance</i> limit is reached. After this the pause or stop command is initiated. A few seconds should be enough.</small></span>
+            </div>
+        </div>
+
+
         <!-- Connection test -->
         <h6>{{_('Connection Test') }}</h6>
         <div class="control-group">
-            <button class="btn btn-primary span4" data-bind="enable: enableConnectionTest, click: function() { showConnectionTest(); }" title="{{ _('Start sensor connection test')|edq }}">Start Test</button>
+            <button class="btn btn-primary span4" data-bind="enable: enableConnectionTest, click: function() { showConnectionTest(); }" title="{{ _('Start sensor connection test')|edq }}">Switch</button>
         </div>
     </form>
 </div>
@@ -109,6 +109,6 @@
     </div>
     <div class="modal-footer">
         <!--<button class="btn" data-dismiss="modal" data-bind="enable: !$root.working()" aria-hidden="true">{{ _('Close') }}</button>-->
-        <button class="btn" data-dismiss="modal" data-bind="click: function() { stopConnectionTest(); }" aria-hidden="true">{{ _('Close') }}</button>
+        <button class="btn" data-dismiss="modal" data-bind="click: function() {  }" aria-hidden="true">{{ _('Close') }}</button>
     </div>
 </div>

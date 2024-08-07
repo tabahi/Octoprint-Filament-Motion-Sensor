@@ -11,12 +11,13 @@ class SmartFilamentSensorDetectionData(object):
         self.callbackUpdateUI()
 
     @property
-    def print_started(self):
-        return self._print_started
+    def print_status_flag(self):
+        return self._print_status_flag
 
-    @print_started.setter
-    def print_started(self, value):
-        self._print_started = value
+    @print_status_flag.setter
+    def print_status_flag(self, value):
+        self._print_status_flag = value
+        self.callbackUpdateUI()
 
     @property
     def lastE(self):
@@ -41,6 +42,7 @@ class SmartFilamentSensorDetectionData(object):
     @absolut_extrusion.setter
     def absolut_extrusion(self, value):
         self._absolut_extrusion = value
+
 
     @property
     def last_motion_detected(self):
@@ -76,7 +78,7 @@ class SmartFilamentSensorDetectionData(object):
         self.callbackUpdateUI = pCallback
 
         # Default values
-        self._print_started = False
+        self._print_status_flag = -1
         self._lastE = -1
         self._currentE = -1
         self._last_motion_detected = ""

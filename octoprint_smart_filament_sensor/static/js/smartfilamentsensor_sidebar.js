@@ -7,9 +7,12 @@ $(function(){
 
         self.isSensorEnabled = ko.observable(undefined);
         self.remainingDistance = ko.observable(undefined);
+        self.StatusFlag = ko.observable(undefined);
+        self.StatusFlagText = ko.observable(undefined);
         self.lastMotionDetected = ko.observable(undefined);
         self.isFilamentMoving = ko.observable(undefined);
         self.isConnectionTestRunning = ko.observable(false);
+        self.isConnectionTestRunningBool = ko.observable(undefined);
 
         //Returns the value in Yes/No if the Sensor is enabled 
         self.getSensorEnabledString = function(){
@@ -46,6 +49,9 @@ $(function(){
             }
         });
 
+
+        
+
         self.onDataUpdaterPluginMessage = function(plugin, data){
             if(plugin !== "smartfilamentsensor"){
                 return;
@@ -53,7 +59,19 @@ $(function(){
             
             var message = JSON.parse(data);
             self.remainingDistance( Math.round(message["_remaining_distance"]) );
-            self.lastMotionDetected((new Date((message["_last_motion_detected"] * 1000))).toString());
+            if (message["_print_status_flag"] !== undefined) 
+                {
+                    var status_int = message["_print_status_flag"];
+                    self.StatusFlag( status_int);
+                    if (status_int==-1) self.StatusFlagText("Off");
+                    else if (status_int==0) self.StatusFlagText("Paused");
+                    else if (status_int==1) self.StatusFlagText("Waiting for Z move");
+                    else if (status_int==2) self.StatusFlagText("Waiting for extrusion");
+                    else if (status_int==3) self.StatusFlagText("Monitoring");
+                    else if (status_int==4) self.StatusFlagText("No motion grace period");
+                }
+            var seconds_gone_by = Math.round((new Date() - (new Date((message["_last_motion_detected"] * 1000)))) / 1000);
+            self.lastMotionDetected(seconds_gone_by.toString() + "s");
 
             if(message["_filament_moving"] == true){
                 self.isFilamentMoving("Yes");
@@ -64,9 +82,13 @@ $(function(){
 
             if(message["_connection_test_running"] == true){
                 self.isConnectionTestRunning("Running");
+                
+                self.isConnectionTestRunningBool(true);
             }
             else{
                 self.isConnectionTestRunning("Stopped");
+                
+                self.isConnectionTestRunningBool(false);
             }
         };
 
