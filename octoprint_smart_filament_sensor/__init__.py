@@ -184,7 +184,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             if(self.motion_sensor_thread is None): self.motion_sensor_thread = None
         except: self.motion_sensor_thread  = None
 
-        if self.motion_sensor_enabled and (self.motion_sensor_pin!=-1):
+        if self.motion_sensor_enabled and (self.motion_sensor_pin>=0):
             #if (self.mode == 0):
             #    self._logger.debug("GPIO mode: Board Mode")
             #else:
@@ -212,7 +212,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             self._data.filament_moving = True
         else:
             self.motion_sensor_enabled = False
-            self._data.print_status_flag
+            self._data.print_status_flag = -1
         
     # Stop the motion_sensor thread
     def motion_sensor_stop_thread(self):
@@ -328,13 +328,13 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
     def on_event(self, event, payload):
         if event is Events.PRINT_STARTED:
             self.stop_connection_test()
-            if (self.motion_sensor_enabled):
+            if (self.motion_sensor_enabled) and (self.motion_sensor_pin>=0):
                 self._data.print_status_flag = 1
                 #if(self.detection_method == 1):
             self.init_distance_detection()
 
         elif event is Events.PRINT_RESUMED:
-            if (self.motion_sensor_enabled):
+            if (self.motion_sensor_enabled) and (self.motion_sensor_pin>=0):
                 self._data.print_status_flag = 1
 
             # If distance detection is used reset the remaining distance, because otherwise the print is not resuming anymore
