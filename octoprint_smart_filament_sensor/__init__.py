@@ -466,7 +466,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
         return cmd
 
 
-__plugin_name__ = "Smart Filament Sensor V2.1"
+__plugin_name__ = "Smart Filament Sensor V2"
 __plugin_version__ = "2.1"
 __plugin_pythoncompat__ = ">=2.7,<5"
 
