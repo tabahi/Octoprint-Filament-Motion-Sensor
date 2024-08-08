@@ -129,12 +129,12 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             detection_method = 0, # 0 = timeout detection, 1 = distance detection
 
             # Distance detection
-            motion_sensor_detection_distance = 15, # Recommended detection distance from Marlin would be 7
+            motion_sensor_detection_distance = 7, # Recommended detection distance from Marlin would be 7
 
             # Timeout detection
             motion_sensor_max_not_moving=120,  # Maximum time no movement is detected - default continously
-            motion_sensor_max_not_moving_after_dist=30,   # Maximum grace time after extrusion distance limit reached
-            pause_command="M600",
+            motion_sensor_max_not_moving_after_dist=20,   # Maximum grace time after extrusion distance limit reached
+            pause_command="@pause",
             #send_gcode_only_once=False,  # Default set to False for backward compatibility
         )
 
@@ -242,7 +242,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 
     # Reset the distance, if the remaining distance is smaller than the new value
     def reset_distance (self):
-        #self._logger.debug("Motion sensor detected movement")
+        self._logger.info("Motion sensor reset_distance")
         self.code_sent = False
         self.last_movement_time = datetime.now()
         if(self._data.remaining_distance < self.motion_sensor_detection_distance):
@@ -466,9 +466,9 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
         return cmd
 
 
-__plugin_name__ = "Smart Filament Sensor"
-__plugin_version__ = "1.2"
-__plugin_pythoncompat__ = ">=2.7,<4"
+__plugin_name__ = "Smart Filament Sensor V2.1"
+__plugin_version__ = "2.1"
+__plugin_pythoncompat__ = ">=2.7,<5"
 
 def __plugin_load__():
     global __plugin_implementation__

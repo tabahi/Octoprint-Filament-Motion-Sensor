@@ -1,20 +1,80 @@
+'''
+Run this script to test your smart sensor's input manually. Run it with the Octorprint environment:
+
+/home/pi/oprint/bin/python3.9  /home/pi/oprint/lib/python3.9/site-packages/octoprint_smart_filament_sensor/sensor_gpiod_check.py
+
+~oprint might be at a different path, and python3.9 could be python3.11 or some newer version.
+
+Change the sensor pin below. Pin 17 works well with RPi 5 and zero2w.
+
+Error fixes:
+Try:
+sudo apt install gpiod
+Try:
+/home/pi/oprint/bin/pip install gpiod
+'''
+
+import sys
 import os
-
-
 import gpiod
 from gpiod.line import Direction
 import select
 
 from datetime import timedelta
 from gpiod.line import Bias, Edge
-import time
+
 
 motion_sensor_PIN = 17
-runout_switch_PIN = 27
 
 
-chip_address = '/dev/gpiochip4' if (os.uname().nodename=='rpi5') else '/dev/gpiochip0'
-chip = gpiod.Chip(chip_address)
+
+def get_revision():
+    """
+    Returns Raspberry Pi Revision Code
+    """
+    with open("/proc/device-tree/system/linux,revision", "rb") as fp:
+        return int.from_bytes(fp.read(4), 'big')
+
+def processor():
+    """
+    Raspberry Pi SOC
+    returns
+        0: BCM2835
+        1: BCM2836
+        2: BCM2837
+        3: BCM2711
+        4: BCM2712
+    """
+    return int((get_revision()>>12)&7)
+
+def type(rev):
+    """
+    Raspberry Pi Type
+    returns
+    0: A
+    1: B
+    2: A+
+    3: B+
+    4: 2B
+    6: CM1
+    8: 3B
+    9: Zero
+    a: CM3
+    c: Zero W
+    d: 3B+
+    e: 3A+
+    10: CM3+
+    11: 4B
+    12: Zero 2 W
+    13: 400
+    14: CM4
+    15: CM4S
+    17: 5
+    """
+    return int((rev>>4)&0xff)
+
+
+
 
 def print_chip_info(chip_address):
     
@@ -25,6 +85,8 @@ def print_chip_info(chip_address):
         print(f"{info.name} [{info.label}] ({info.num_lines} lines)")
 
 
+
+
 def edge_type_str(event):
     if event.event_type is event.Type.RISING_EDGE:
         return "Rising"
@@ -33,10 +95,20 @@ def edge_type_str(event):
     return "Unknown"
 
 
+def read_pin_status(chip_path, line_gpio_pin):
+
+    ## simple get value:
+    lines_req = gpiod.request_lines(chip_path, consumer="sensor", config={line_gpio_pin: gpiod.LineSettings(direction=Direction.INPUT)},)
+    value = lines_req.get_value(line_gpio_pin)
+    print("Current pin status", value)
+
+
+
 
 def async_watch_line_value(chip_path, line_gpio_pin):
     # Assume a button connecting the pin to ground,
     # so pull it up and provide some debounce.
+    read_pin_status(chip_path, line_gpio_pin)
     with gpiod.request_lines(
         chip_path,
         consumer="async-watch-line-value",
@@ -48,15 +120,17 @@ def async_watch_line_value(chip_path, line_gpio_pin):
             )
         },
     ) as request:
+        
         poll = select.poll()
         poll.register(request.fd, select.POLLIN)
+        print("Now polling... Looking for interrupts")
         try:
             while True:
                 # Other fds could be registered with the poll and be handled
                 # separately using the return value (fd, event) from poll()
-                poll.poll(250)
+                poll.poll(200)
                 
-                if request.wait_edge_events(0.25):
+                if request.wait_edge_events(0.2):
                     for event in request.read_edge_events():
                         print(
                             "line_gpio_pin: {}  type: {:<7}  event #{}".format(
@@ -66,18 +140,41 @@ def async_watch_line_value(chip_path, line_gpio_pin):
                 
         finally:
             poll.unregister(request.fd)
-try:
-    async_watch_line_value(chip_address, motion_sensor_PIN)
+
+
+
+
+
+def main():
+
+    rev = get_revision()
+    print("Linux Revision:", f"{rev:08x}")
     
-except OSError as ex:
-    print(ex, "\nCustomise the example configuration to suit your situation")
+    print("Processor:", f"{processor()}")
+    print("RPi Type:", f"{type(rev):02x}")
+    
+    rpi5_later = (int(f"{type(rev):02x}")>= int(f"{17}"))
+    print("Is RPI5 or later", rpi5_later)
+    
+    chip_address = '/dev/gpiochip4' if (rpi5_later) else '/dev/gpiochip0'
+    print("Selected gpiochip:", chip_address)
 
+    try:
+        chip = gpiod.Chip(chip_address)
+    except Exception as ex:
+        print(ex)
+        print("Chip address wrong")
 
+    print("Hostname:", os.uname().nodename, ", GPIO Chip:", chip_address, ", PIN:", motion_sensor_PIN)
+    print_chip_info(chip_address)
+    try:
+        async_watch_line_value(chip_address, motion_sensor_PIN)
+        
+    except OSError as ex:
+        print(ex, "\nCustomise the example configuration to suit your situation")
+    
+if __name__ == '__main__':
+    main()
 
-
-## simple get value:
-lines_req = gpiod.request_lines('/dev/gpiochip4', consumer="sensor", config={motion_sensor_PIN: gpiod.LineSettings(direction=Direction.INPUT)},)
-value = lines_req.get_value(motion_sensor_PIN)
-print(value)
 
 exit()

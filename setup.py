@@ -5,14 +5,14 @@
 
 # The plugin's identifier, has to be unique
 from setuptools import setup
-plugin_identifier = "smartfilamentsensor"
+plugin_identifier = "smartfilamentsensor_v2"
 
 # The plugin's python package, should be "octoprint_<plugin identifier>", has to be unique
 plugin_package = "octoprint_smart_filament_sensor"
 
 # The plugin's human readable name. Can be overwritten within OctoPrint's internal data via __plugin_name__ in the
 # plugin module
-plugin_name = "Octoprint-Smart-Filament-Sensor"
+plugin_name = "Octoprint-Smart-Filament-Sensor-V2"
 
 # The plugin's version. Can be overwritten within OctoPrint's internal data via __plugin_version__ in the plugin module
 plugin_version = "2.1"
@@ -22,7 +22,7 @@ plugin_version = "2.1"
 plugin_description = "A plugin to directly add Smart Filament Sensors like BigTreeTech Smart Filament Sensor to Octoprint."
 
 # The plugin's author. Can be overwritten within OctoPrint's internal data via __plugin_author__ in the plugin module
-plugin_author = "Tabahi. Forked from Royrdan"
+plugin_author = "Tabahi"
 
 # The plugin's author's mail address.
 plugin_author_email = "tabahi@duck.com"

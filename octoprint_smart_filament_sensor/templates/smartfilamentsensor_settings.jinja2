@@ -2,8 +2,7 @@
     <h4>{{ _('Smart Filament Sensor') }}</h4>
     <form class="form-horizontal">
     <!-- General -->
-        <div class="alert alert-primary">With V1.1.2 of the plugin, the Distance Detection was improved. 
-        It is recommended to use the distance detection as it is more accurate than the timeout detection.</div>
+        <div class="alert alert-primary">With V2.1 of the plugin, the dependency on RPi.GPIO is replaced by libgpiod. It should work with the latest Raspbian OS (Bookworm) but likely to have problems with the older versions.</div>
         <h6>{{ _('General') }}</h6>
         
         
@@ -69,15 +68,15 @@
         </div>
 
 
-        <!-- Grace timeout after No Extrusion Distance Limit -->
+        <!-- Grace timeout for No Extrusion Distance Limit -->
         <div class="control-group">
-            <label class="control-label">{{ _('Grace timeout after max extrusion limit reached:') }}</label>
+            <label class="control-label">{{ _('Grace period for <i>No movement max extrusion distance</i>:') }}</label>
             <div class="controls">
                 <div class="input-append" data-toggle="tooltip" title="{{ _('When a sensor state change happens, wait for this amount of time to wait for the signal to stabilize.') }}">
                     <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.smartfilamentsensor.motion_sensor_max_not_moving_after_dist">
                     <span class="add-on">sec</span>
                 </div>
-                <span class="help-block"><small>Grace period after the <i>No movement max extrusion distance</i> limit is reached. After this the pause or stop command is initiated. A few seconds should be enough.</small></span>
+                <span class="help-block"><small>This is the duration of no motion to consider when pausing due to the max distance limit reached. If the distance limit is reached but the last movement was detected was under this duration, then the print wont be paused. Set it longer for long retractions.</small></span>
             </div>
         </div>
 
@@ -85,7 +84,7 @@
         <!-- Connection test -->
         <h6>{{_('Connection Test') }}</h6>
         <div class="control-group">
-            <button class="btn btn-primary span4" data-bind="enable: enableConnectionTest, click: function() { showConnectionTest(); }" title="{{ _('Start sensor connection test')|edq }}">Switch</button>
+            <button class="btn btn-primary span4" data-bind="enable: enableConnectionTest, click: function() { showConnectionTest(); }" title="{{ _('Start sensor connection test')|edq }}">Test</button>
         </div>
     </form>
 </div>
