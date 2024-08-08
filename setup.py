@@ -8,7 +8,7 @@ from setuptools import setup
 plugin_identifier = "smartfilamentsensor"
 
 # The plugin's python package, should be "octoprint_<plugin identifier>", has to be unique
-plugin_package = "octoprint_smart_filament_sensor_v2"
+plugin_package = "octoprint_smart_filament_sensor"
 
 # The plugin's human readable name. Can be overwritten within OctoPrint's internal data via __plugin_name__ in the
 # plugin module
