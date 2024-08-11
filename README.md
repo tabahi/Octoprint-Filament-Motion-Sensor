@@ -20,10 +20,9 @@ To use this plugin a Filament Sensor needs to be sending a toggling digital sign
 - You can also make one yourself using a slotted wheel, an LED, and a photo-diode. Connect the output of the photo-diode to a GPIO pin of RPi. Make sure to not input more than 3.3V to raspberry pi. Here is an example (rather complicated) model by [Ludwig3D on Thingiverse](https://www.thingiverse.com/thing:3071723).
 
 ## Features
-*  Detects filament jams, runrouts, clogs, spool tangles and pauses the print.
-* Configurable GPIO pins.
+*  Detects filament jams, runrouts, clogs, spool tangles and pause the print automatically.
 * Uses highly responsive GPIO interrupts.
-* Can respond within a second of no-filament-movement.
+* Can respond within a second of no-filament-motion.
 *  Configuration limits and timeouts for pausing.
 * Custom GCode on pause.
 * Heaters timeout after pause.
@@ -43,11 +42,11 @@ After installation a restart of Octoprint is required.
 ### Pausing Limits
 A print can be paused due to two limits when the filament is not moving:
 
-1. Extrusion distance limit after jam. It's usually set between 5mm and 20mm depending on the print speed.
-2. Timeout after jam.
+1. Extrusion distance limit after jam. It's best to set between 5mm (slow) and 20mm (fast) depending on the print speed. With retractions, the filament might go back and forth triggering this limit therefore a grace-period can be set to override this limit for a couple of seconds.
+2. Timeout after jam. Seconds to wait after no-filament-motion before pausing. 5s for very fast print, 120s for very slow prints.
 
 ### Octoprint - Firmware & Protocol
-If you are not printing by SD card, then the octoprint @pause command is pretty simple and works for most. However, there is a custom GCode option with or without Octoprint's pause if you want to send commands such M600. By default, the custom GCode is just a beep tune.
+If you are not printing by SD card, then the octoprint @pause command is pretty simple and works for most. However, there is a custom GCode option with or without Octoprint's pause if you want to send commands such as M600 for filament change. By default, the custom GCode is just a beep tune.
 
 ### Octoprint - GCode Scripts
 The custom GCode managed by the plugin is only run when a print is paused due to a suspected jam. You can also add a GCode Script for "After print job is paused" in OctoPrint Settings > GCode Scripts that will run for all pauses. Make sure to not overlap the two. Also adding a GCode script for "Before print job is resumed" might be useful, in the case you hit the heatbed or print head during the change of the filament or removing the blockage.
