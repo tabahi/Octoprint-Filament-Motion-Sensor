@@ -30,10 +30,10 @@ $(function(){
 
 var status_flags = {
     "PRINTER_ERROR": -10,
-    "PAUSED_ON_RESUME_T0_LOW": -7,
     "PAUSED_HEATERS_OFF": -6,
     "PAUSED_HEATERS_UNSURE": -5,
-    "PAUSED_EXTRINSIC": -3,
+    "PAUSED_EXTRINSIC": -4,
+    "PAUSED_ON_RESUME_T0_LOW": -3,
     "PAUSED_JAMMED": -2,
     "OFF": -1,
     "PAUSED": 0,

@@ -7,18 +7,19 @@ from octoprint.events import Events
 from datetime import datetime
 import flask
 from .SensorGPIOThread import MotionSensorGPIOThread
+from .SensorGPIOThread import plugin_check_rpi_gpio
 from .data import FilamentMotionSensorDetectionData
 import os.path
-_debug_in_terminal = True # shows messages in Gcode terminal
+_debug_in_terminal = False # send debug messages in Gcode terminal
 
-gcode_file_path = os.path.dirname(os.path.realpath(__file__)) + "/data/custom_ending.gcode"
+gcode_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data", "custom_ending.gcode")
 
 status_flags = {
                 "PRINTER_ERROR": -10,
-                "PAUSED_ON_RESUME_T0_LOW": -7,
                 "PAUSED_HEATERS_OFF": -6,
                 "PAUSED_HEATERS_UNSURE": -5,
-                "PAUSED_EXTRINSIC": -3,
+                "PAUSED_EXTRINSIC": -4,
+                "PAUSED_ON_RESUME_T0_LOW": -3,
                 "PAUSED_JAMMED": -2,
                 "OFF": -1,
                 "PAUSED": 0,
@@ -147,10 +148,10 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
             motion_sensor_detection_distance = 7, # Recommended detection distance from Marlin would be 7
 
             # Timeout detection
-            motion_sensor_max_not_moving=120,  # Maximum time no movement is detected - default continously
-            motion_sensor_max_not_moving_after_dist=20,   # Maximum grace time after extrusion distance limit reached
-            initial_delay = 120,
-            heaters_timeout = 60,
+            motion_sensor_max_not_moving=20,  # Maximum time no movement is detected - default continously
+            motion_sensor_max_not_moving_after_dist=10,   # Maximum grace time after extrusion distance limit reached
+            initial_delay = 60,
+            heaters_timeout = 20,
             pause_command="@pause",
             #send_gcode_only_once=False,  # Default set to False for backward compatibility
         )
@@ -262,7 +263,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
         if (not pMoving) and (self._data.flag>=status_flags["MONITORING"]) and (self._data.flag<status_flags["JAMMED_AWAITING_MOTION"]):
             calc_dur_no_move = (datetime.now() - self.last_movement_time).total_seconds()
 
-            if ( ((self._data.flag==status_flags["DIST_REACHED_GRACE_PERIOD"]) and (calc_dur_no_move > self.motion_sensor_max_not_moving_after_dist))):
+            if ( ((self._data.flag==status_flags["DIST_REACHED_GRACE_PERIOD"] or self._data.flag==status_flags["TIMEOUT_10S_LEFT_DIST_REACHED"]) and (calc_dur_no_move > self.motion_sensor_max_not_moving_after_dist))):
                 self._data.flag = status_flags["DIST_REACHED_STOP_ASAP"]
 
             elif (calc_dur_no_move > self.motion_sensor_max_not_moving) and (self._data.flag < status_flags["MAX_TIMEOUT_STOP_ASAP"]):
@@ -274,7 +275,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
                 if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] 10s to max timeout")
                 if (self._data.flag==status_flags["DIST_REACHED_GRACE_PERIOD"]):
                     self._data.flag = status_flags["TIMEOUT_10S_LEFT_DIST_REACHED"]
-                else: self._data.flag = status_flags["TIMEOUT_10S_LEFT"]
+                elif (self._data.flag==status_flags["MONITORING"]): self._data.flag = status_flags["TIMEOUT_10S_LEFT"]
 
 
             if(not self.code_sent) and ((self._data.flag == status_flags["DIST_REACHED_STOP_ASAP"]) or (self._data.flag == status_flags["MAX_TIMEOUT_STOP_ASAP"])):
@@ -373,7 +374,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
             )
             '''
             self._data.remaining_distance = (self._data.remaining_distance - deltaDistance)
-            if (self._data.flag == status_flags["DIST_REACHED_GRACE_PERIOD"]):
+            if (self._data.flag == status_flags["DIST_REACHED_GRACE_PERIOD"] or self._data.flag==status_flags["TIMEOUT_10S_LEFT_DIST_REACHED"]):
                 self._data.flag = status_flags["MONITORING"]
                 if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] Filament distance top-up. Could be retractions.")
                 self.sensor_event_callback(True)
@@ -388,7 +389,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
                     self.sensor_event_callback(False)
                 else:
                     if (self._data.flag>=status_flags["MONITORING"]) and (self._data.flag<status_flags["DIST_REACHED_GRACE_PERIOD"]):
-                        if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] Distance limit reached. Waiting for grace period.")
+                        if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] Distance limit reached. Waiting for grace period. State:" +str(self._data.flag) )
                         self._data.flag = status_flags["DIST_REACHED_GRACE_PERIOD"]
 
     def updateToUi(self):
@@ -424,7 +425,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
             if (self.motion_sensor_enabled) and (self.motion_sensor_pin>=0):
                 
                 # check T0 before resuming after a pause
-                if (self.t0_temp==-255) or ((self.last_pause_t0 > 0) and (self.t0_temp > (self.last_pause_t0-10))) or ((self.last_pause_t0 ==-255) and (self.t0_temp > 175)):
+                if (self.t0_temp==-255) or ((self.last_pause_t0 > 0) and (self.t0_temp > (self.last_pause_t0-10))) or ((self.last_pause_t0 ==-255) and (self.t0_temp > 175) or (self._data.flag == status_flags["PAUSED_EXTRINSIC"]) or (self.pause_command!="@pause")):
                     self.main_thread_cleanup(event)
                     self._data.flag = status_flags["WAITING_Z_MOVE"]
                 else:
@@ -490,7 +491,8 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
                         if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] Heaters unsure State: " + str(self._data.flag))
                         self._data.flag = status_flags["PAUSED_HEATERS_UNSURE"]
                 else:
-                    self._data.flag = status_flags["PAUSED_EXTRINSIC"]
+                    if (self._data.flag!=status_flags["PAUSED_ON_RESUME_T0_LOW"]):
+                        self._data.flag = status_flags["PAUSED_EXTRINSIC"]
                     self.main_thread_cleanup(event)
             else:
                 self.main_thread_cleanup(event)
@@ -712,9 +714,14 @@ def __plugin_load__():
 
 def __plugin_check__():
     try:
-        #import RPi.GPIO
         import gpiod
     except ImportError:
         return False
+
+    try:
+        if (plugin_check_rpi_gpio()==False): return False
+    except:
+        return False
+
 
     return True

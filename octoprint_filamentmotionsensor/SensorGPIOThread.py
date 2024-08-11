@@ -58,6 +58,20 @@ def type(rev):
 
 
 
+def plugin_check_rpi_gpio():
+    
+    rev = get_revision()
+    rpi5_later = (int(f"{type(rev):02x}")>= int(f"{17}"))
+    
+    chip_address = '/dev/gpiochip4' if (rpi5_later) else '/dev/gpiochip0'
+
+    try:
+        chip = gpiod.Chip(chip_address)
+    except:
+        return False
+    
+    if (gpiod.is_gpiochip_device(chip_address)==False): return False
+    return True
 
 
 class MotionSensorGPIOThread(threading.Thread):

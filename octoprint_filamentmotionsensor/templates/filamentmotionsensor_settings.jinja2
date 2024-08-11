@@ -41,7 +41,7 @@
                     <option value="@cancel">{{ _('@cancel - Octo cancel + custom GCode') }}</option>
                     <option value=";">{{ _('; Custom GCode only') }}</option>
                 </select>
-                <span class="help-block"><small>Generically, Octoprint @pause will pause the print, move the extruder aside a bit, then you can change the filament and press resume. A custom GCode can be added to run after or instead.</small></span>
+                <span class="help-block"><small>Generically, Octoprint @pause will pause the print, then execute the custom GCode from this plugin, and then the GCode from "After print job is paused" in "GCODE Scripts" settings.</small></span>
             </div>
 
             <button class="btn btn-primary span4" data-bind="click: function() { showGCodeEditor(); }" title="{{ _('Custom GCode')|edq }}">Custom GCode</button>
@@ -62,7 +62,7 @@
                     <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_detection_distance">
                     <span class="add-on">mm</span>
                 </div>
-                <span class="help-block"><small> Max allowed extrusion distance after no filament movement is detected by the sensor. Increase it if the filament bends or when using TPU.</i></small></span>
+                <span class="help-block"><small> Max allowed extrusion distance after no filament movement is detected by the sensor. Increase it if the filament bends or when using TPU. Recommended 5mm for slow prints, 20mm for fast prints.</i></small></span>
             </div>
         </div>
 

@@ -34,7 +34,7 @@ plugin_url = "https://github.com/tabahi/Octoprint-Filament-Motion-Sensor"
 plugin_license = "AGPLv3"
 
 # Any additional requirements besides OctoPrint should be listed here
-plugin_requires = ['gpiod==2.2.1']
+plugin_requires = ['gpiod>=2.0.2']
 
 # --------------------------------------------------------------------------------------------------------------------
 # More advanced options that you usually shouldn't have to touch follow after this point
@@ -42,7 +42,7 @@ plugin_requires = ['gpiod==2.2.1']
 
 # Additional package data to install for this plugin. The subfolders "templates", "static" and "translations" will
 # already be installed automatically if they exist.
-plugin_additional_data = ["data/custom_ending.gcode"]
+plugin_additional_data = ["octoprint_filamentmotionsensor/data/custom_ending.gcode"]
 
 # Any additional python packages you need to install with your plugin that are not contains in <plugin_package>.*
 plugin_addtional_packages = []
