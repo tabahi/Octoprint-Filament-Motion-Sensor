@@ -4,25 +4,16 @@ $(function(){
 
         self.settingsViewModel = parameters[0];
 
-        self.isSensorEnabled = ko.observable(undefined);
         self.remainingDistance = ko.observable(undefined);
         self.StatusFlag = ko.observable(undefined);
         self.StatusFlagText = ko.observable(undefined);
         self.lastMotionDetected = ko.observable(undefined);
         self.isFilamentMoving = ko.observable(undefined);
-        self.isConnectionTestRunning = ko.observable(false);
         self.isConnectionTestRunningBool = ko.observable(undefined);
 
         //Returns the value in Yes/No if the Sensor is enabled 
-        self.getSensorEnabledString = function(){
-            var sensorEnabled = self.settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_enabled();
-
-            if(sensorEnabled){
-                return "Yes";
-            }
-            else{
-                return "No";
-            }
+        self.isSensorEnabled = function(){
+            return self.settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_enabled();
         };
         
 
@@ -58,7 +49,7 @@ var status_flags = {
             }
             
             var message = JSON.parse(data);
-            self.remainingDistance( Math.round(message["_remaining_distance"]) );
+            self.remainingDistance( String(Math.round(message["_remaining_distance"])) + "mm" );
             if (message["_flag"] !== undefined) 
                 {
                     var status_int = message["_flag"];
@@ -69,22 +60,20 @@ var status_flags = {
             var seconds_gone_by = Math.round((new Date() - (new Date((message["_last_motion_detected"] * 1000)))) / 1000);
             if (seconds_gone_by<0) seconds_gone_by = 0;
             if (seconds_gone_by>99999)  self.lastMotionDetected("Never");
-            else self.lastMotionDetected(seconds_gone_by.toString() + "s");
+            else self.lastMotionDetected(seconds_gone_by.toString() + "s ago");
 
             if(message["_filament_moving"] == true){
-                self.isFilamentMoving("Yes");
+                self.isFilamentMoving(true);
             }
             else{
-                self.isFilamentMoving("No");
+                self.isFilamentMoving(false);
             }
 
             if(message["_connection_test_running"] == true){
-                self.isConnectionTestRunning("Running");
                 
                 self.isConnectionTestRunningBool(true);
             }
             else{
-                self.isConnectionTestRunning("Stopped");
                 
                 self.isConnectionTestRunningBool(false);
             }
@@ -116,7 +105,7 @@ var status_flags = {
             return;
         }
     }
-
+    
     OCTOPRINT_VIEWMODELS.push({
         construct: FilamentMotionSensorSidebarViewModel,
         name: "FilamentMotionSensorSidebarViewModel",

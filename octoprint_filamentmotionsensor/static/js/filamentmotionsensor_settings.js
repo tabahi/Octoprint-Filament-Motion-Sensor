@@ -147,11 +147,8 @@ $(function(){
             }
         };
 
-        self.enableConnectionTest = ko.pureComputed(function() {
-            return !self.printerStateViewModel.isBusy();
-        });
 
-        self.enableGCodeTesting = ko.pureComputed(function() {
+        self.enableCriticalSettings = ko.pureComputed(function() {
             return !self.printerStateViewModel.isBusy();
         });
 

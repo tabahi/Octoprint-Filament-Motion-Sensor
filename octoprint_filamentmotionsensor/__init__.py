@@ -57,6 +57,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
         self._data = FilamentMotionSensorDetectionData(self.motion_sensor_detection_distance, True, self.updateToUi)
         self.t0_temp = -255
         self.last_temp_time = 0
+        self.hook_it = True
 #Properties
     @property
     def motion_sensor_pin(self):
@@ -402,6 +403,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
     # Remove motion sensor thread if the print is paused
     def main_thread_cleanup(self, pEvent=""):
         
+        
         if self.motion_sensor_enabled or (self.motion_sensor_thread is not None):
             self._logger.info("%s: Motion sensor was active." % (pEvent))
             self.motion_sensor_stop_thread()
@@ -411,9 +413,11 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
     def on_event(self, event, payload):
         
         if event is Events.PRINT_STARTED:
+            
             self.stop_secondary_thread()
             if (self._data.flag!=status_flags["OFF"]): self.main_thread_cleanup(event)
             if (self.motion_sensor_enabled) and (self.motion_sensor_pin>=0):
+                
                 self._data.flag = status_flags["WAITING_Z_MOVE"]
                 
                 self.init_distance_detection()
@@ -445,7 +449,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
             if(self._data.flag==status_flags["WAITING_Z_MOVE"]):
                 
                 self._data.flag = status_flags["WAITING_E_MOVE"]
-
+        
         # Cancel or stop events
         elif event in (
             Events.PRINT_DONE,
@@ -457,7 +461,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
             if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] print-end event " + str(event))
             self._logger.info("%s: Disabling filament sensors." % (event))
             
-            if self.motion_sensor_enabled:
+            if self.motion_sensor_enabled and (self.motion_sensor_pin>=0):
                 if (self._data.flag>status_flags["ANTICIPATING_JAM"]) and (self.trigger_custom_gcode):
                     self.trigger_custom_gcode = False
                     self.send_custom_gcode_afterpause()
@@ -472,7 +476,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
         elif (event is Events.PRINT_PAUSED) or (event is Events.FILAMENT_CHANGE):
             if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] pause command ACK. State: " + str(self._data.flag))
             
-            if self.motion_sensor_enabled:
+            if self.motion_sensor_enabled and (self.motion_sensor_pin>=0):
                 if (self._data.flag!=status_flags["JAMMED_AWAITING_MOTION"]) and (self._data.flag>status_flags["ANTICIPATING_JAM"]):
                     # JAMMED_AWAITING_MOTION is when there is only-gcode, no octopause, in that case gcode has been already sent
                     if (self.trigger_custom_gcode):
@@ -498,6 +502,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
                 self.main_thread_cleanup(event)
 
         elif event is Events.USER_LOGGED_IN:
+            if not (self.motion_sensor_enabled and (self.motion_sensor_pin>=0)): self.main_thread_cleanup(event)
             self.updateToUi()
 
         elif event in (
@@ -549,7 +554,12 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
             if (os.path.exists(gcode_file_path)):
                 gcode_f = open(gcode_file_path, "r")
                 gcode_f_contents = gcode_f.read()
-            else: gcode_f_contents += "; No Gcode at \n\n; " + gcode_file_path
+            else:
+                default_beeps_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_beeps.gcode")
+                if (os.path.exists(default_beeps_path)):
+                    gcode_f = open(default_beeps_path, "r")
+                    gcode_f_contents = gcode_f.read()
+                else: gcode_f_contents = "; No Gcode\n\n"
             response = flask.make_response(gcode_f_contents, 200)
             response.mimetype = "text/plain"
             return response
@@ -613,7 +623,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
     def distance_detection(self, comm_instance, phase, cmd, cmd_type, gcode, *args, **kwargs):
         # Only performed if distance detection is used
         #if(self.detection_method == 1 and self.motion_sensor_enabled):
-        if(self.motion_sensor_enabled):
+        if self.motion_sensor_enabled and (self.motion_sensor_pin>=0):
             # G0 and G1 for linear moves and G2 and G3 for circle movements
             if(gcode == "G0" or gcode == "G1" or gcode == "G2" or gcode == "G3"):
                 commands = cmd.split(" ")

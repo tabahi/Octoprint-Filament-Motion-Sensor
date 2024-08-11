@@ -1,22 +1,38 @@
-<div class="control-group">
-   <div class="controls form-inline">
-       <label class="control-label">{{ _('Sensor enabled:') }} <span data-bind="text: getSensorEnabledString()"></span></label>
-    </div>
-   <div class="controls form-inline">
-       <label class="control-label">{{ _('Filament is moving:') }} <span data-bind="text: isFilamentMoving"></span></label>
-    </div>
-    <div class="controls form-inline">
-       <label class="control-label" data-bind="visible: 1">{{ _('Remaining distance:') }} <span data-bind="text: remainingDistance"></span></label>
-    </div>
-    <div class="controls form-inline">
-       <label class="control-label" data-bind="visible: 1">{{ _('Last motion detected:') }} <span data-bind="text: lastMotionDetected"></span></label>
-   </div>
+<div class="control-group" data-bind="visible: isSensorEnabled()" >
+   
+   
    
     <div class="controls form-inline">
-       <label class="control-label" data-bind="visible: 1">{{ _('Status:') }} <small> <span data-bind="text: StatusFlagText"></span></small></label>
+       <label class="control-label" data-bind="visible: 1">{{ _('<i class="fa fa-circle-o-notch fa-spin" data-bind="visible: isFilamentMoving"></i>
+      <i class="fa fa-solid fa-pause" data-bind="hidden: isFilamentMoving"></i>') }} <small> <span data-bind="text: StatusFlagText"></span></small></label>
     </div>
+
+   <table>
+      <tbody>
+         <tr>
+            <td style="padding-right: 25px;"> <label class="control-label" title="{{ _('Extrusion distance left to the pause limit.') }}"><small>Distance left: </small><span data-bind="text: remainingDistance"</span><small>left</small></label> </td>
+
+            <td> <label class="control-label"  title="{{ _('Seconds since the last motion of the filament.') }}" ><small>Moved: </small><span data-bind="text: lastMotionDetected" ></span></label> </td>
+         </tr>
+      </tbody>
+   </table>
+    
+    <div class="row">
+      <div class="col-sm-6">
+      
+         </div>
+      <div class="col-sm-6"> </div>
+   </div> 
+     
+
    
     <div class="controls form-inline">
        <label class="control-label" data-bind="visible: isConnectionTestRunningBool">{{ _('Test running:') }} <span data-bind="text: isConnectionTestRunningBool"></span></label>
    </div>
+</div>
+
+<div class="control-group" data-bind="hidden: isSensorEnabled()" >
+   <div class="controls form-inline">
+       <label class="control-label" data-bind="hidden: isSensorEnabled()"> <span><small>Disabled</small></span></label>
+    </div>
 </div>

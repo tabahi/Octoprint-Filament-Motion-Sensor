@@ -1,7 +1,7 @@
 ;M600 ; filament change cmd. Remove semicolon to enable
 
-
-; Imperial March - Beep Tune
+; Press save to enable an annoying beep tune
+; Imperial March
 M300 S392 P436
 M300 S0 P109
 M300 S392 P436
@@ -71,5 +71,4 @@ M300 S0 P27
 M300 S440 P108
 M300 S0 P27
 
-
-; End of annoying Beep Tune
+; End of the annoying Beep Tune

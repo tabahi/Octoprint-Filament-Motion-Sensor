@@ -11,7 +11,7 @@
         <div class="control-group">
             <div class="controls" data-toggle="tooltip" title="{{ _('Enable or disble the sensor usage.') }}">
                 <label class="checkbox">
-                    <input type="checkbox" data-bind="checked: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_enabled"> {{ _('Enable Sensor') }}
+                    <input type="checkbox" data-bind="enable: enableCriticalSettings, checked: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_enabled"> {{ _('Enable Sensor') }}
                 </label>
             </div>
         </div>
@@ -21,11 +21,11 @@
         <div class="control-group">
             <label class="control-label">{{ _('Motion Sensor GPIO Pin:') }}</label>
             <div class="controls" data-toggle="tooltip" title="{{ _('Which Raspberry Pi GPIO pin your switch is attached to (-1 disables the plugin)') }}">
-                <input type="text" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_pin"> 
+                <input type="text" step="any" min="0" class="input-mini text-right" data-bind="enable: enableCriticalSettings, value: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_pin"> 
             </div>
             
             <span class="help-block"><small>Refer to <a href="https://pinout.xyz/ ">pinout.xyz</a> for pinout. Use the BCM number after GPIO-?. e.g. GPIO 21 is the last pin. Prefer 17.</small></span>
-            <button class="btn btn-primary span4" data-bind="enable: enableConnectionTest, click: function() { showConnectionTest(); }" title="{{ _('Start sensor connection test')|edq }}">Test sensor</button>
+            <button class="btn btn-primary span4" data-bind="enable: enableCriticalSettings, click: function() { showConnectionTest(); }" title="{{ _('Start sensor connection test')|edq }}">Test sensor</button>
             
         </div>
 
@@ -164,7 +164,7 @@
             <span class="help-block alert alert-primary"><small>These GCode commands will be sent to the printer after Octoprint pause or cancel. In Custom-GCode-only mode, Octorprint might not pause. Be weary of what you write here. Leave it empty to disable it. </small></span>
 
              <div class="controls">
-             <textarea id="filamentmotionsensor_custom_gcode" name="filamentmotionsensor_custom_gcode" rows="12" cols="100"></textarea>
+             <textarea id="filamentmotionsensor_custom_gcode" name="filamentmotionsensor_custom_gcode" rows="12" cols="100" style="width: 100%;"></textarea>
             </div>
 
             
@@ -172,7 +172,7 @@
         
         <div class="btn-group">
 
-            <button class="btn btn-danger"  id="filamentmotionsensor_test_gcode" name="filamentmotionsensor_test_gcode"  data-bind="enable: enableGCodeTesting, click: function() { test_custom_gcode(); }"  title="{{ _('Send these commands to the printer now')|edq }}">Test now</button>
+            <button class="btn btn-danger"  id="filamentmotionsensor_test_gcode" name="filamentmotionsensor_test_gcode"  data-bind="enable: enableCriticalSettings, click: function() { test_custom_gcode(); }"  title="{{ _('Send these commands to the printer now')|edq }}">Test now</button>
         
         </div>
             
