@@ -3,15 +3,39 @@ from __future__ import absolute_import
 import octoprint.plugin
 from octoprint.events import Events
 #import RPi.GPIO as GPIO
-import gpiod
-from time import sleep
+#import gpiod
 from datetime import datetime
 import flask
-import json
-from octoprint_smart_filament_sensor.SensorGPIOThread import SmartFilamentSensorGPIOThread
-from octoprint_smart_filament_sensor.data import SmartFilamentSensorDetectionData
+from .SensorGPIOThread import MotionSensorGPIOThread
+from .data import FilamentMotionSensorDetectionData
+import os.path
+_debug_in_terminal = True # shows messages in Gcode terminal
 
-class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
+gcode_file_path = os.path.dirname(os.path.realpath(__file__)) + "/data/custom_ending.gcode"
+
+status_flags = {
+                "PRINTER_ERROR": -10,
+                "PAUSED_ON_RESUME_T0_LOW": -7,
+                "PAUSED_HEATERS_OFF": -6,
+                "PAUSED_HEATERS_UNSURE": -5,
+                "PAUSED_EXTRINSIC": -3,
+                "PAUSED_JAMMED": -2,
+                "OFF": -1,
+                "PAUSED": 0,
+                "WAITING_Z_MOVE": 4,
+                "WAITING_E_MOVE": 6,
+                "WAITING_START_DELAY": 9,
+                "MONITORING": 10,
+                "ANTICIPATING_JAM": 11,
+                "TIMEOUT_10S_LEFT": 12,
+                "DIST_REACHED_GRACE_PERIOD": 20,
+                "TIMEOUT_10S_LEFT_DIST_REACHED": 22,
+                "DIST_REACHED_STOP_ASAP": 25,
+                "MAX_TIMEOUT_STOP_ASAP": 26,
+                "JAMMED_AWAITING_MOTION": 30,
+}
+
+class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
                                  octoprint.plugin.EventHandlerPlugin,
                                  octoprint.plugin.TemplatePlugin,
                                  octoprint.plugin.SettingsPlugin,
@@ -19,20 +43,19 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
                                  octoprint.plugin.SimpleApiPlugin):
 
     def initialize(self):
-        ''' depreciated
-        self._logger.info("Running RPi.GPIO version '{0}'".format(GPIO.VERSION))
-        if GPIO.VERSION < "0.6":       # Need at least 0.6 for edge detection
-            raise Exception("RPi.GPIO must be greater than 0.6")
-        GPIO.setwarnings(False)        # Disable GPIO warnings
-        '''
-        ###self.print_status_flag = -1
+        
         self.last_movement_time = datetime.now()
         self.lastE = -1
         self.currentE = -1
         self.START_DISTANCE_OFFSET = 7
+        self.print_start_time = 0
+        self.print_pause_time = 0
+        self.last_pause_t0 = -255
         self.code_sent = False
-        self._data = SmartFilamentSensorDetectionData(self.motion_sensor_detection_distance, True, self.updateToUi)
-
+        self.trigger_custom_gcode = False
+        self._data = FilamentMotionSensorDetectionData(self.motion_sensor_detection_distance, True, self.updateToUi)
+        self.t0_temp = -255
+        self.last_temp_time = 0
 #Properties
     @property
     def motion_sensor_pin(self):
@@ -64,10 +87,23 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
     def motion_sensor_max_not_moving(self):
         return int(self._settings.get(["motion_sensor_max_not_moving"]))
 
-#Timeout after extrusion distance limit reached
+
+# Addess features in V2
     @property
     def motion_sensor_max_not_moving_after_dist(self):
         return int(self._settings.get(["motion_sensor_max_not_moving_after_dist"]))
+
+
+    @property
+    def initial_delay(self):
+        return int(self._settings.get(["initial_delay"]))
+    
+    @property
+    def heaters_timeout(self):
+        return int(self._settings.get(["heaters_timeout"]))
+        
+        
+
 
 #General Properties
     @property
@@ -80,44 +116,23 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 
 # Initialization methods
     def _setup_sensor(self):
-        # Clean up before intializing again, because ports could already be in use
-
-        #if(self.mode == 0):
-        #    self._logger.info("Using Board Mode")
-        #    #GPIO.setmode(GPIO.BOARD)
-        #else:
+        
         self._logger.info("Using BCM Mode ONLY")
-        #GPIO.setmode(GPIO.BCM)
-
-        #GPIO.setup(self.motion_sensor_pin, GPIO.IN)
-
-
-        #self.detection_method = 0 ### CURRENTLY only timeout method
-        '''
-         Add reset_distance if detection_method is distance_detection
-        if (self.detection_method == 1):
-            # Remove event first, because it might been in use already
-            try:
-                GPIO.remove_event_detect(self.motion_sensor_pin)
-            except:
-                self._logger.warn("Pin " + str(self.motion_sensor_pin) + " not used before")
-
-            GPIO.add_event_detect(self.motion_sensor_pin, GPIO.BOTH, callback=self.reset_distance)
-        '''
+        
         if self.motion_sensor_enabled == False:
             self._logger.info("Motion sensor is deactivated")
 
         self._data.filament_moving = False
         self.motion_sensor_thread = None
 
-        self.load_smart_filament_sensor_data()
+        self.load_filament_sensor_data()
 
 
-    def load_smart_filament_sensor_data(self):
+    def load_filament_sensor_data(self):
         self._data.remaining_distance = self.motion_sensor_detection_distance
 
     def on_after_startup(self):
-        self._logger.info("Smart Filament Sensor started")
+        self._logger.info("Filament Motion Sensor started")
         self._setup_sensor()
 
     def get_settings_defaults(self):
@@ -134,6 +149,8 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             # Timeout detection
             motion_sensor_max_not_moving=120,  # Maximum time no movement is detected - default continously
             motion_sensor_max_not_moving_after_dist=20,   # Maximum grace time after extrusion distance limit reached
+            initial_delay = 120,
+            heaters_timeout = 60,
             pause_command="@pause",
             #send_gcode_only_once=False,  # Default set to False for backward compatibility
         )
@@ -146,35 +163,43 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
         return [dict(type="settings", custom_bindings=True)]
 
     def get_assets(self):
-        return dict(js=["js/smartfilamentsensor_sidebar.js", "js/smartfilamentsensor_settings.js"])
+        return dict(js=["js/filamentmotionsensor_sidebar.js", "js/filamentmotionsensor_settings.js"])
 
 # Sensor methods
     # Connection tests
-    def stop_connection_test(self):
+    def stop_secondary_thread(self):
         try:
             if(self.motion_sensor_thread is None): self.motion_sensor_thread = None
         except: self.motion_sensor_thread  = None
 
-        if (self.motion_sensor_thread is not None and self.motion_sensor_thread.name == "ConnectionTest"):
+        if (self.motion_sensor_thread is not None and (self.motion_sensor_thread.name == "ConnectionTest")):
             self.motion_sensor_thread.keepRunning = False
             self.motion_sensor_thread = None
             self._data.connection_test_running = False
-            self._logger.info("Connection test stopped")
+            self._logger.info("stop_secondary_thread stopped")
+            self._data.flag = status_flags["OFF"]
+            
+            if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] stop_secondary_thread.")
         else:
-            self._logger.info("Connection test is not running")
+            self._logger.info("stop_secondary_thread thread is not running")
+            self._data.connection_test_running = False
 
     def start_connection_test(self):
-        CONNECTION_TEST_TIME = 2
+        CONNECTION_TEST_TIME = 5
         try:
             if(self.motion_sensor_thread is None): self.motion_sensor_thread = None
         except: self.motion_sensor_thread  = None
         
         if(self.motion_sensor_thread is None):
-            self.motion_sensor_thread = SmartFilamentSensorGPIOThread(1, "ConnectionTest", self.motion_sensor_pin,
+            self.motion_sensor_thread = MotionSensorGPIOThread(1, "ConnectionTest", self.motion_sensor_pin,
                 CONNECTION_TEST_TIME, self._logger, self._data, pCallback=self.connectionTestCallback)
             self.motion_sensor_thread.start()
             self._data.connection_test_running = True
-            self._logger.info("Connection test started")
+            self._logger.info("Connection test monitor started. Thread name:" + str(self.motion_sensor_thread.name ))
+    
+   
+            
+
 
     # Starts the motion sensor if the sensors are enabled
     def motion_sensor_start(self):
@@ -185,34 +210,32 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
         except: self.motion_sensor_thread  = None
 
         if self.motion_sensor_enabled and (self.motion_sensor_pin>=0):
-            #if (self.mode == 0):
-            #    self._logger.debug("GPIO mode: Board Mode")
-            #else:
+           
             self._logger.debug("GPIO mode: BCM Mode ONLY")
             self._logger.debug("GPIO pin: " + str(self.motion_sensor_pin))
 
-            # Distance detection
-            #if (self.detection_method == 1):
+            
             self._logger.info("Motion sensor started")
             self._logger.debug("Distance: " + str(self.motion_sensor_detection_distance))
             self.reset_distance()
-            # Timeout detection
-            #elif (self.detection_method == 0):
-                
+           
+            not_moving_return_seconds = 1
             if self.motion_sensor_thread == None:
                 self._logger.debug("Max Timeout: " + str(self.motion_sensor_max_not_moving))
 
+                
+                self.motion_sensor_thread = MotionSensorGPIOThread(1, "MotionSensorTimeoutDetectionThread", self.motion_sensor_pin,
+                    not_moving_return_seconds, self._logger, self._data, pCallback=self.sensor_event_callback)
                 # Start Timeout_Detection thread
-                self.motion_sensor_thread = SmartFilamentSensorGPIOThread(1, "MotionSensorTimeoutDetectionThread", self.motion_sensor_pin,
-                    self.motion_sensor_max_not_moving, self._logger, self._data, pCallback=self.sensor_event_callback)
                 self.motion_sensor_thread.start()
                 
 
             self.code_sent = False
-            self._data.filament_moving = True
+            self.trigger_custom_gcode = False
         else:
             self.motion_sensor_enabled = False
-            self._data.print_status_flag = -1
+            if self.motion_sensor_thread is not None:
+                self.motion_sensor_stop_thread()
         
     # Stop the motion_sensor thread
     def motion_sensor_stop_thread(self):
@@ -220,34 +243,85 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             if(self.motion_sensor_thread is None): self.motion_sensor_thread = None
         except: self.motion_sensor_thread  = None
         
-        if(self.motion_sensor_thread != None):
+        if(self.motion_sensor_thread is not None):
+            if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] motion_sensor_stop_thread.")
             self.motion_sensor_thread.keepRunning = False
             self.motion_sensor_thread = None
             self._logger.info("Motion sensor stopped")
+        
+        if (self._data.flag > status_flags["OFF"]):
+            
+            self._data.flag = status_flags["OFF"]
 
-# Sensor callbacks
-    # Send configured pause command to the printer to interrupt the print
+
+# Sensor callbacks - this is where the stopping conditions are coded.
+# It is called when: 1) when sensor senses movement. [IO interrupt event]  2) when extruder extrudes more than it should [hooked event]
     def sensor_event_callback (self, pMoving=False):
-        # Check if stop signal was already sent
         self._data.filament_moving = pMoving
-        if (pMoving): self.reset_distance()
+        
+        if (not pMoving) and (self._data.flag>=status_flags["MONITORING"]) and (self._data.flag<status_flags["JAMMED_AWAITING_MOTION"]):
+            calc_dur_no_move = (datetime.now() - self.last_movement_time).total_seconds()
 
-        if(not self.code_sent) and (not pMoving) and (self._data.print_status_flag>=3):
-            self._logger.error("Motion sensor detected no movement")
-            self._logger.info("Pause command: " + self.pause_command)
-            self._printer.commands(self.pause_command)
-            self.code_sent = True
-            self._data.filament_moving = False
-            self.lastE = -1 # Set to -1 so it ignores the first test then continues
+            if ( ((self._data.flag==status_flags["DIST_REACHED_GRACE_PERIOD"]) and (calc_dur_no_move > self.motion_sensor_max_not_moving_after_dist))):
+                self._data.flag = status_flags["DIST_REACHED_STOP_ASAP"]
+
+            elif (calc_dur_no_move > self.motion_sensor_max_not_moving) and (self._data.flag < status_flags["MAX_TIMEOUT_STOP_ASAP"]):
+                self._data.flag = status_flags["MAX_TIMEOUT_STOP_ASAP"]
+
+            # 10 seconds to timeout
+            elif (self._data.flag>=status_flags["MONITORING"]) and (self.motion_sensor_max_not_moving>=20) and (self._data.flag!=status_flags["TIMEOUT_10S_LEFT"] or self._data.flag!=status_flags["TIMEOUT_10S_LEFT_DIST_REACHED"]) and ( self.motion_sensor_max_not_moving - calc_dur_no_move <=11) and (self._data.flag < status_flags["MAX_TIMEOUT_STOP_ASAP"]):
+
+                if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] 10s to max timeout")
+                if (self._data.flag==status_flags["DIST_REACHED_GRACE_PERIOD"]):
+                    self._data.flag = status_flags["TIMEOUT_10S_LEFT_DIST_REACHED"]
+                else: self._data.flag = status_flags["TIMEOUT_10S_LEFT"]
+
+
+            if(not self.code_sent) and ((self._data.flag == status_flags["DIST_REACHED_STOP_ASAP"]) or (self._data.flag == status_flags["MAX_TIMEOUT_STOP_ASAP"])):
+                
+                
+                self._logger.info("Pause command: " + self.pause_command)
+                self.code_sent = True
+                self.lastE = -1 # Set to -1 so it ignores the first test then continues
+
+                if (self.pause_command==";"): # only gcode WITHOUT octopause or cancel
+                    if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] gcode-only on clog.")
+                    self._data.flag = status_flags["JAMMED_AWAITING_MOTION"]
+                    self.trigger_custom_gcode = False
+                    self.send_custom_gcode_afterpause()
+                else:
+                    self._printer.commands(self.pause_command)
+                    if (_debug_in_terminal):
+                        self._printer.commands("echo: [Fsensor] pause command sent. State: " + str(self._data.flag))
+                    #send_custom_gcode_afterpause() gcode will be sent after the pause event is confirmed
+                    self.trigger_custom_gcode = True
+
+        elif (pMoving):
+            self.reset_distance() #self.code_sent = False
+            if (self.code_sent):
+                if (self._data.flag==status_flags["JAMMED_AWAITING_MOTION"]):
+                    self.code_sent = False
+                    self._data.flag = status_flags["WAITING_Z_MOVE"]
+            elif (self._data.flag >= status_flags["ANTICIPATING_JAM"]):
+                self._data.flag = status_flags["MONITORING"]
+        '''
+        # 10 seconds of no movement
+        elif  (calc_dur_no_move >= 10) and (calc_dur_no_move<14):
+            if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] No movement for 10 seconds")
+        
+        # 60 seconds of no movement
+        elif  (calc_dur_no_move >= 59) and (calc_dur_no_move<62):
+            if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] No movement for 60 seconds")
+        '''
 
     # Reset the distance, if the remaining distance is smaller than the new value
     def reset_distance (self):
-        self._logger.info("Motion sensor reset_distance")
+        #self._logger.info("Motion sensor reset_distance")
         self.code_sent = False
         self.last_movement_time = datetime.now()
         if(self._data.remaining_distance < self.motion_sensor_detection_distance):
             self._data.remaining_distance = self.motion_sensor_detection_distance
-            self._data.filament_moving = True
+            
 
     # Initialize the distance detection values
     def init_distance_detection(self):
@@ -271,7 +345,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             if (self._data.absolut_extrusion):
                 # LastE is not used and set to the same value as currentE. Occurs on first run or after resuming
                 if (self.lastE < 0):
-                    self._logger.info(f"Ignoring run with a negative value. Setting LastE to PE: {self.lastE} = {pE}")
+                    #self._logger.info(f"Ignoring run with a negative value. Setting LastE to PE: {self.lastE} = {pE}")
                     self.lastE = pE
                 else:
                     self.lastE = self.currentE
@@ -293,22 +367,29 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 
                 #deltaDistance=deltaDistance / self.motion_sensor_detection_distance REMAINDER
                 deltaDistance = deltaDistance % self.motion_sensor_detection_distance
-
+            '''
             self._logger.debug(
                 f"Remaining: {self._data.remaining_distance} - Extruded: {deltaDistance} = {self._data.remaining_distance - deltaDistance}"
             )
+            '''
             self._data.remaining_distance = (self._data.remaining_distance - deltaDistance)
-            if (self._data.print_status_flag > 3): self._data.print_status_flag = 3
-
+            if (self._data.flag == status_flags["DIST_REACHED_GRACE_PERIOD"]):
+                self._data.flag = status_flags["MONITORING"]
+                if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] Filament distance top-up. Could be retractions.")
+                self.sensor_event_callback(True)
         else:
-            self._data.filament_moving = False
-            # Only pause the print if its been over 5 seconds since the last movement. Stops pausing when the CPU gets hung up.
-            if (datetime.now() - self.last_movement_time).total_seconds() > self.motion_sensor_max_not_moving_after_dist:
-                self._logger.info("Filament sensor didn't move enough to account for extrusion")
-                self.sensor_event_callback(False)
-            else:
-                self._data.print_status_flag = 4
-                self._logger.debug("Ignored pause command due to 5 second rule")
+            
+            if (self._data.flag!=status_flags["WAITING_START_DELAY"]): ## skip during initial delay
+                ## this condition is redundant in sensor_event_callback
+                if (datetime.now() - self.last_movement_time).total_seconds() > self.motion_sensor_max_not_moving_after_dist:
+                    if (self._data.flag<status_flags["DIST_REACHED_STOP_ASAP"]):
+                        if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] Distance limit reached. Grace period timeout.")
+                        self._data.flag = status_flags["DIST_REACHED_STOP_ASAP"]
+                    self.sensor_event_callback(False)
+                else:
+                    if (self._data.flag>=status_flags["MONITORING"]) and (self._data.flag<status_flags["DIST_REACHED_GRACE_PERIOD"]):
+                        if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] Distance limit reached. Waiting for grace period.")
+                        self._data.flag = status_flags["DIST_REACHED_GRACE_PERIOD"]
 
     def updateToUi(self):
         self._plugin_manager.send_plugin_message(self._identifier, self._data.toJSON())
@@ -316,65 +397,141 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
     def connectionTestCallback(self, pMoving=False):
         self._data.filament_moving = pMoving
 
+
     # Remove motion sensor thread if the print is paused
-    def print_paused(self, pEvent=""):
+    def main_thread_cleanup(self, pEvent=""):
         
-        self._logger.info("%s: Pausing filament sensors." % (pEvent))
-        if self.motion_sensor_enabled:# and self.detection_method == 0:
+        if self.motion_sensor_enabled or (self.motion_sensor_thread is not None):
+            self._logger.info("%s: Motion sensor was active." % (pEvent))
             self.motion_sensor_stop_thread()
             
-
+    
 # Events
     def on_event(self, event, payload):
+        
         if event is Events.PRINT_STARTED:
-            self.stop_connection_test()
+            self.stop_secondary_thread()
+            if (self._data.flag!=status_flags["OFF"]): self.main_thread_cleanup(event)
             if (self.motion_sensor_enabled) and (self.motion_sensor_pin>=0):
-                self._data.print_status_flag = 1
-                #if(self.detection_method == 1):
-            self.init_distance_detection()
-
+                self._data.flag = status_flags["WAITING_Z_MOVE"]
+                
+                self.init_distance_detection()
+                self.print_start_time = datetime.now()
+                self.print_pause_time = 0
+                self.last_pause_t0 = -255
         elif event is Events.PRINT_RESUMED:
+            if (self._data.connection_test_running): self.stop_secondary_thread()
             if (self.motion_sensor_enabled) and (self.motion_sensor_pin>=0):
-                self._data.print_status_flag = 1
-
-            # If distance detection is used reset the remaining distance, because otherwise the print is not resuming anymore
-            #if(self.detection_method == 1):
-            self.reset_remainin_distance()
-
-            #self.motion_sensor_start()
+                
+                # check T0 before resuming after a pause
+                if (self.t0_temp==-255) or ((self.last_pause_t0 > 0) and (self.t0_temp > (self.last_pause_t0-10))) or ((self.last_pause_t0 ==-255) and (self.t0_temp > 175)):
+                    self.main_thread_cleanup(event)
+                    self._data.flag = status_flags["WAITING_Z_MOVE"]
+                else:
+                    self._logger.info("Paused on resume because temperature too low: " + self.pause_command)
+                    self._printer.commands(self.pause_command)
+                    if (_debug_in_terminal):
+                        self._printer.commands("echo: [Fsensor] print paused because temperature too low.")
+                    self._data.flag = status_flags["PAUSED_ON_RESUME_T0_LOW"]
+                # If distance detection is used reset the remaining distance, because otherwise the print is not resuming anymore
+                #if(self.detection_method == 1):
+                self.reset_remainin_distance()
+                self.trigger_custom_gcode = False
+        
 
         # Start motion sensor on first G1 command
         elif event is Events.Z_CHANGE:
-            if(self._data.print_status_flag==1):
-                #self.motion_sensor_start() # changed to begin after first extrusion
-                self._data.print_status_flag = 2
+            if(self._data.flag==status_flags["WAITING_Z_MOVE"]):
+                
+                self._data.flag = status_flags["WAITING_E_MOVE"]
 
-        # Disable sensor
+        # Cancel or stop events
         elif event in (
             Events.PRINT_DONE,
             Events.PRINT_FAILED,
             Events.PRINT_CANCELLED,
-            Events.ERROR
+            Events.PRINT_CANCELLING,
+            Events.E_STOP,
         ):
+            if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] print-end event " + str(event))
             self._logger.info("%s: Disabling filament sensors." % (event))
-            self._data.print_status_flag = -1
-            if self.motion_sensor_enabled:# and self.detection_method == 0:
-                self.motion_sensor_stop_thread()
+            
+            if self.motion_sensor_enabled:
+                if (self._data.flag>status_flags["ANTICIPATING_JAM"]) and (self.trigger_custom_gcode):
+                    self.trigger_custom_gcode = False
+                    self.send_custom_gcode_afterpause()
+                self.main_thread_cleanup(event)
+                if (self._data.connection_test_running): self.stop_secondary_thread()
+                
+                self.updateToUi()
+            self._data.flag = status_flags["OFF"]
+            self.main_thread_cleanup(event)
 
-        # Disable motion sensor if paused
-        elif event is Events.PRINT_PAUSED:
-            if(self._data.print_status_flag>0):
-                self._data.print_status_flag = 0
-            self.print_paused(event)
+        # Pause event detected
+        elif (event is Events.PRINT_PAUSED) or (event is Events.FILAMENT_CHANGE):
+            if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] pause command ACK. State: " + str(self._data.flag))
+            
+            if self.motion_sensor_enabled:
+                if (self._data.flag!=status_flags["JAMMED_AWAITING_MOTION"]) and (self._data.flag>status_flags["ANTICIPATING_JAM"]):
+                    # JAMMED_AWAITING_MOTION is when there is only-gcode, no octopause, in that case gcode has been already sent
+                    if (self.trigger_custom_gcode):
+                        self.trigger_custom_gcode = False
+                        self.send_custom_gcode_afterpause()
+                    enable_heaters_timeout = False
+                    if(self._data.flag>=status_flags["PAUSED_JAMMED"]):
+                        if (self.t0_temp > 100) or (self.t0_temp==-255):
+                            enable_heaters_timeout = True
+                        self._data.flag = status_flags["PAUSED_JAMMED"]
+                    self.print_pause_time = datetime.now()
+                    self.last_pause_t0 = self.t0_temp if (self.t0_temp > 180) else -255
+                    if (enable_heaters_timeout):
+                        self._data.flag = status_flags["PAUSED_JAMMED"]
+                    elif (self._data.flag!=status_flags["PAUSED_ON_RESUME_T0_LOW"]):
+                        if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] Heaters unsure State: " + str(self._data.flag))
+                        self._data.flag = status_flags["PAUSED_HEATERS_UNSURE"]
+                else:
+                    self._data.flag = status_flags["PAUSED_EXTRINSIC"]
+                    self.main_thread_cleanup(event)
+            else:
+                self.main_thread_cleanup(event)
 
         elif event is Events.USER_LOGGED_IN:
             self.updateToUi()
+
+        elif event in (
+            Events.DISCONNECTED,
+            Events.ERROR
+        ): #critial errors. Try to turn off heaters after timeout if possible
+            #if self.motion_sensor_enabled:
+            self._data.flag = status_flags["PRINTER_ERROR"]
+            self.main_thread_cleanup(event)
+
+    def send_custom_gcode_afterpause(self):
+    
+        if (os.path.exists(gcode_file_path)):
+            gcode_f = open(gcode_file_path, "r")
+            gcode_Lines = gcode_f.readlines()
+            if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] sending custom Gcode commands. Total lines: " + str(len(gcode_Lines)))
+            for line in gcode_Lines:
+                if (len(line)>0):
+                    self._printer.commands(line)
+
+    def test_custom_gcode_commands(self, gcode_Lines):
+       
+        if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] TESTING custom Gcode commands. Total lines: " + str(len(gcode_Lines)))
+        for line in gcode_Lines:
+            if (len(line)>0):
+                self._printer.commands(line)
+
 
 # API commands
     def get_api_commands(self):
         return dict(
             startConnectionTest=[],
-            stopConnectionTest=[]
+            stopConnectionTest=[],
+            loadEndingGcode=[],
+            testEndingGcode=[],
+            saveEndingGcode=[],
         )
 
     def on_api_command(self, command, data):
@@ -383,22 +540,48 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
             self.start_connection_test()
             return flask.make_response("Started connection test", 204)
         elif(command == "stopConnectionTest"):
-            self.stop_connection_test()
+            self.stop_secondary_thread()
             return flask.make_response("Stopped connection test", 204)
+            
+        elif(command == "loadEndingGcode"):
+            if (os.path.exists(gcode_file_path)):
+                gcode_f = open(gcode_file_path, "r")
+                gcode_f_contents = gcode_f.read()
+            else: gcode_f_contents += "; No Gcode at \n\n; " + gcode_file_path
+            response = flask.make_response(gcode_f_contents, 200)
+            response.mimetype = "text/plain"
+            return response
+        elif(command == "testEndingGcode"):
+            try:
+                if (data["gcode_edited"] is not None):
+                    if (len(data["gcode_edited"])>1):
+                        self.test_custom_gcode_commands(data["gcode_edited"].splitlines())
+                return flask.make_response(flask.jsonify({"resp": "commands exec"}), 201)
+            except Exception as ex:
+                return flask.make_response(flask.jsonify({"resp": "testing_failed", "error": str(ex)}), 501)
+            
+        elif(command == "saveEndingGcode"):
+            try:
+                if (data["gcode_edited"] is not None):
+                    with open(gcode_file_path, "w") as gcode_f:
+                        gcode_f.write(data["gcode_edited"])
+                return flask.make_response(flask.jsonify({"resp": "saved"}), 201)
+            except Exception as ex:
+                return flask.make_response(flask.jsonify({"resp": "saving_failed", "error": str(ex)}), 501)
         else:
             return flask.make_response("Not found", 404)
 
 # Plugin update methods
     def update_hook(self):
         return dict(
-            smartfilamentsensor=dict(
-                displayName="Smart Filament Sensor",
+            filamentmotionsensor=dict(
+                displayName="Filament Motion Sensor",
                 displayVersion=self._plugin_version,
 
                 # version check: github repository
                 type="github_release",
-                user="Royrdan",
-                repo="Octoprint-Smart-Filament-Sensor",
+                user="Tabahi",
+                repo="Octoprint-Filament-Motion-Sensor ",
                 current=self._plugin_version,
 
                 # stable releases
@@ -418,7 +601,7 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
 				],
 
                 # update method: pip
-                pip="https://github.com/Royrdan/Octoprint-Smart-Filament-Sensor/archive/{target_version}.zip"
+                pip="https://github.com/tabahi/Octoprint-Filament-Motion-Sensor/archive/{target_version}.zip"
             )
         )
 
@@ -436,48 +619,93 @@ class SmartFilamentSensor(octoprint.plugin.StartupPlugin,
                 for command in commands:
                     if command.startswith("E"):
                         extruder = command[1:]
-                        self._logger.debug("----- RUNNING calc_distance -----")
-                        self._logger.debug("Found extrude command in '" + cmd + "' with value: " + extruder)
-                        self.calc_distance(float(extruder))
+                        #self._logger.debug("----- RUNNING calc_distance -----")
+                        #self._logger.debug("Found extrude command in '" + cmd + "' with value: " + extruder)
+                        extruder_float = float(extruder)
+                        #if (extruder_float < 0):
+                        #    pass
+                            #self._logger.info("Extruder retracted: " + str(extruder_float))
+                            #if (_debug_in_terminal): self._printer.commands("echo: [Fsensor] Extruder retracted by " + str(extruder_float))
+                            #extruder_float *= 0.5 # only consider 50% of the negative extrusion ammount
+                        self.calc_distance(extruder_float)
 
                         # set flag to extrusion started
-                        if (self._data.print_status_flag==2):
+                        if (self._data.flag==status_flags["WAITING_E_MOVE"]):
+                            self._data.flag = status_flags["WAITING_START_DELAY"]
+                        if (self._data.flag==status_flags["WAITING_START_DELAY"]) and ((datetime.now() - self.print_start_time).total_seconds() >= self.initial_delay):
+                            self._data.flag = status_flags["MONITORING"]
+                            self.init_distance_detection()
                             self.motion_sensor_start()
-                            self._data.print_status_flag = 3
-
+                        elif (self._data.flag == status_flags["PAUSED"]):
+                            self.motion_sensor_start()
             # G92 reset extruder
-            elif(gcode == "G92"):
+            elif(gcode == "G92") and (self._data.flag  < status_flags["MONITORING"]):
                 #if(self.detection_method == 1):
                 self.init_distance_detection()
-                self._logger.debug("Found G92 command in '" + cmd + "' : Reset Extruders")
+                #self._logger.debug("Found G92 command in '" + cmd + "' : Reset Extruders")
 
             # M82 absolut extrusion mode
             elif(gcode == "M82"):
                 self._data.absolut_extrusion = True
-                self._logger.info("Found M82 command in '" + cmd + "' : Absolut extrusion")
+                #self._logger.info("Found M82 command in '" + cmd + "' : Absolut extrusion")
                 self.lastE = 0
 
             # M83 relative extrusion mode
             elif(gcode == "M83"):
                 self._data.absolut_extrusion = False
-                self._logger.info("Found M83 command in '" + cmd + "' : Relative extrusion")
+                #self._logger.info("Found M83 command in '" + cmd + "' : Relative extrusion")
                 self.lastE = 0
 
+            
         return cmd
 
 
-__plugin_name__ = "Smart Filament Sensor V2"
+    
+
+
+    def process_temperatures(self, comm, parsed_temps):
+        
+        try:
+            self.t0_temp = parsed_temps["T0"][0]
+        except: self.t0_temp = -255
+        self.last_temp_time = datetime.now()
+        
+        if (self.heaters_timeout>=0) and (self._data.flag==status_flags["PAUSED_JAMMED"]) and ((self.print_pause_time!=0)):
+            if (self.t0_temp > 100) or (self.t0_temp==-255):
+                paused_dur = (datetime.now() - self.print_pause_time).total_seconds()
+                #self._printer.commands("echo: paused time " + str(paused_dur)  + ",  "+ str(self.print_pause_time!=0) )
+                if (paused_dur > (self.heaters_timeout*60)):
+                    self._printer.commands("M104 S0 ; turn off extruder heating")
+                    self._printer.commands("M140 S0 ; turn off bed heating")
+                    if (_debug_in_terminal):
+                        self._printer.commands("echo: [Fsensor] status:" + str(self._data.flag))
+                        self._printer.commands("echo: [Fsensor] Turning off heaters")
+                    self._printer.commands("M104 S0 ; turn off extruder heating")
+                    self._printer.commands("M140 S0 ; turn off bed heating")
+                    self._data.flag = status_flags["PAUSED_HEATERS_OFF"]
+            else:
+                if (self._data.flag!=status_flags["PAUSED_ON_RESUME_T0_LOW"]):
+                    self._data.flag = status_flags["PAUSED_HEATERS_UNSURE"]
+                if (self.t0_temp > 50):
+                    self._printer.commands("M104 S0 ; turn off extruder heating")
+                    self._printer.commands("M140 S0 ; turn off bed heating")
+
+        return parsed_temps
+
+
+__plugin_name__ = "Filament Motion Sensor"
 __plugin_version__ = "2.1"
-__plugin_pythoncompat__ = ">=2.7,<5"
+__plugin_pythoncompat__ = ">=2.7,<4"
 
 def __plugin_load__():
     global __plugin_implementation__
-    __plugin_implementation__ = SmartFilamentSensor()
+    __plugin_implementation__ = FilamentMotionSensor()
 
     global __plugin_hooks__
     __plugin_hooks__ = {
         "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.update_hook,
-        "octoprint.comm.protocol.gcode.sent": __plugin_implementation__.distance_detection
+        "octoprint.comm.protocol.gcode.sent": __plugin_implementation__.distance_detection,
+        "octoprint.comm.protocol.temperatures.received": __plugin_implementation__.process_temperatures
     }
 
 

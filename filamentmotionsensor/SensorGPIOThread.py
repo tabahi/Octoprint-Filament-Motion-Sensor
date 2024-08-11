@@ -7,7 +7,6 @@ import select
 
 from datetime import timedelta
 from gpiod.line import Bias, Edge
-import os
 
 
 
@@ -61,8 +60,7 @@ def type(rev):
 
 
 
-#class FilamentMotionSensorTimeoutDetection(threading.Thread):
-class SmartFilamentSensorGPIOThread(threading.Thread):
+class MotionSensorGPIOThread(threading.Thread):
     used_pin = -1
     max_not_moving_time = -1
     keepRunning = True
@@ -133,15 +131,15 @@ class SmartFilamentSensorGPIOThread(threading.Thread):
                     for event in request.read_edge_events():
                         
 
-                        print( "line_gpio_pin: {} event #{}".format( event.line_offset, event.line_seqno ) )
+                        #print( "line_gpio_pin: {} event #{}".format( event.line_offset, event.line_seqno ) )
                         if (event.line_offset==self.used_pin):
                             self._data.last_motion_detected = time.time()
                             self.callback(True)
-                            self._logger.debug("Motion detected at " + str(self._data.last_motion_detected))
+                            #self._logger.debug("Motion detected at " + str(self._data.last_motion_detected))
 
                 timespan = (time.time() - self._data.last_motion_detected)
 
-                if (timespan > self.max_not_moving_time):
+                if (timespan > self.max_not_moving_time): # default 2 seconds
                     if(self.callback != None):
                         self.callback(False)
 

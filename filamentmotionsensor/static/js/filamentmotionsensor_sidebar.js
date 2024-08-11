@@ -1,9 +1,8 @@
 $(function(){
-    function SmartFilamentSensorSidebarViewModel(parameters){
+    function FilamentMotionSensorSidebarViewModel(parameters){
         var self = this;
 
         self.settingsViewModel = parameters[0];
-        //self.smartfilamentsensorSettings = self.settingsViewModel.settings.plugins.smartfilamentsensor;
 
         self.isSensorEnabled = ko.observable(undefined);
         self.remainingDistance = ko.observable(undefined);
@@ -16,7 +15,7 @@ $(function(){
 
         //Returns the value in Yes/No if the Sensor is enabled 
         self.getSensorEnabledString = function(){
-            var sensorEnabled = self.settingsViewModel.settings.plugins.smartfilamentsensor.motion_sensor_enabled();
+            var sensorEnabled = self.settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_enabled();
 
             if(sensorEnabled){
                 return "Yes";
@@ -25,53 +24,52 @@ $(function(){
                 return "No";
             }
         };
-
-        // Returns the value of detection_method as string
-        self.getDetectionMethodString = function(){
-            var detectionMethod = self.settingsViewModel.settings.plugins.smartfilamentsensor.detection_method();
-
-            if(detectionMethod == 0){
-                return "Timeout Detection";
-            }
-            else if(detectionMethod == 1){
-                return "Distance Detection";
-            }
-        };
-
-        self.getDetectionMethodBoolean = ko.pureComputed(function(){
-            var detectionMethod = self.settingsViewModel.settings.plugins.smartfilamentsensor.detection_method();
-
-            if(detectionMethod == 0){
-                return false;
-            }
-            else if(detectionMethod == 1){
-                return true;
-            }
-        });
-
-
         
 
+
+
+var status_flags = {
+    "PRINTER_ERROR": -10,
+    "PAUSED_ON_RESUME_T0_LOW": -7,
+    "PAUSED_HEATERS_OFF": -6,
+    "PAUSED_HEATERS_UNSURE": -5,
+    "PAUSED_EXTRINSIC": -3,
+    "PAUSED_JAMMED": -2,
+    "OFF": -1,
+    "PAUSED": 0,
+    "WAITING_Z_MOVE": 4,
+    "WAITING_E_MOVE": 6,
+    "WAITING_START_DELAY": 9,
+    "MONITORING": 10,
+    "ANTICIPATING_JAM": 11,
+    "TIMEOUT_10S_LEFT": 12,
+    "DIST_REACHED_GRACE_PERIOD": 20,
+    "TIMEOUT_10S_LEFT_DIST_REACHED": 22,
+    "DIST_REACHED_STOP_ASAP": 25,
+    "MAX_TIMEOUT_STOP_ASAP": 26,
+    "JAMMED_AWAITING_MOTION": 30,
+};
+
+;
+
         self.onDataUpdaterPluginMessage = function(plugin, data){
-            if(plugin !== "smartfilamentsensor"){
+            if(plugin !== "filamentmotionsensor"){
                 return;
             }
             
             var message = JSON.parse(data);
             self.remainingDistance( Math.round(message["_remaining_distance"]) );
-            if (message["_print_status_flag"] !== undefined) 
+            if (message["_flag"] !== undefined) 
                 {
-                    var status_int = message["_print_status_flag"];
+                    var status_int = message["_flag"];
                     self.StatusFlag( status_int);
-                    if (status_int==-1) self.StatusFlagText("Off");
-                    else if (status_int==0) self.StatusFlagText("Paused");
-                    else if (status_int==1) self.StatusFlagText("Waiting for Z move");
-                    else if (status_int==2) self.StatusFlagText("Waiting for extrusion");
-                    else if (status_int==3) self.StatusFlagText("Monitoring");
-                    else if (status_int==4) self.StatusFlagText("No motion grace period");
+                    const key = Object.keys(status_flags).find(key => status_flags[key] === status_int);
+                    self.StatusFlagText(String(key));
                 }
             var seconds_gone_by = Math.round((new Date() - (new Date((message["_last_motion_detected"] * 1000)))) / 1000);
-            self.lastMotionDetected(seconds_gone_by.toString() + "s");
+            if (seconds_gone_by<0) seconds_gone_by = 0;
+            if (seconds_gone_by>99999)  self.lastMotionDetected("Never");
+            else self.lastMotionDetected(seconds_gone_by.toString() + "s");
 
             if(message["_filament_moving"] == true){
                 self.isFilamentMoving("Yes");
@@ -94,7 +92,7 @@ $(function(){
 
         self.startConnectionTest = function(){
             $.ajax({
-                url: API_BASEURL + "plugin/smartfilamentsensor",
+                url: API_BASEURL + "plugin/filamentmotionsensor",
                 type: "POST",
                 dataType: "json",
                 data: JSON.stringify({ "command": "startConnectionTest" }),
@@ -105,7 +103,7 @@ $(function(){
 
         self.stopConnectionTest = function(){
             $.ajax({
-                url: API_BASEURL + "plugin/smartfilamentsensor",
+                url: API_BASEURL + "plugin/filamentmotionsensor",
                 type: "POST",
                 dataType: "json",
                 data: JSON.stringify({ "command": "stopConnectionTest" }),
@@ -120,9 +118,9 @@ $(function(){
     }
 
     OCTOPRINT_VIEWMODELS.push({
-        construct: SmartFilamentSensorSidebarViewModel,
-        name: "smartFilamentSensorSidebarViewModel",
+        construct: FilamentMotionSensorSidebarViewModel,
+        name: "FilamentMotionSensorSidebarViewModel",
         dependencies: ["settingsViewModel"],
-        elements: ["#sidebar_plugin_smartfilamentsensor"]
+        elements: ["#sidebar_plugin_filamentmotionsensor"]
     });
 });

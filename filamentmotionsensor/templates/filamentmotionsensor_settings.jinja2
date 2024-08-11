@@ -1,0 +1,187 @@
+<div id="settings_plugin_filamentmotionsensor">
+    <h4>{{ _('Filament Motion Sensor') }}</h4>
+    <form class="form-horizontal">
+    <!-- General -->
+
+
+
+        <h6>{{ _('Sensor Connection') }}</h6>
+        
+        <!-- Enable / Disable detection -->
+        <div class="control-group">
+            <div class="controls" data-toggle="tooltip" title="{{ _('Enable or disble the sensor usage.') }}">
+                <label class="checkbox">
+                    <input type="checkbox" data-bind="checked: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_enabled"> {{ _('Enable Sensor') }}
+                </label>
+            </div>
+        </div>
+
+
+        <!-- GPIO pin on the raspberry -->
+        <div class="control-group">
+            <label class="control-label">{{ _('Motion Sensor GPIO Pin:') }}</label>
+            <div class="controls" data-toggle="tooltip" title="{{ _('Which Raspberry Pi GPIO pin your switch is attached to (-1 disables the plugin)') }}">
+                <input type="text" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_pin"> 
+            </div>
+            
+            <span class="help-block"><small>Refer to <a href="https://pinout.xyz/ ">pinout.xyz</a> for pinout. Use the BCM number after GPIO-?. e.g. GPIO 21 is the last pin. Prefer 17.</small></span>
+            <button class="btn btn-primary span4" data-bind="enable: enableConnectionTest, click: function() { showConnectionTest(); }" title="{{ _('Start sensor connection test')|edq }}">Test sensor</button>
+            
+        </div>
+
+
+
+        <h6>{{ _('Action commands') }}</h6>
+
+        <div class="control-group">
+            <label class="control-label">{{ _('Pause command:') }}</label>
+            <div class="controls" data-toggle="tooltip" title="{{ _('The pause command that is sent to the printer') }}">
+                <select class="select-mini" data-bind="value: settingsViewModel.settings.plugins.filamentmotionsensor.pause_command">
+                    <option value="@pause">{{ _('@pause - Octo pause + custom GCode') }}</option>         
+                    <option value="@cancel">{{ _('@cancel - Octo cancel + custom GCode') }}</option>
+                    <option value=";">{{ _('; Custom GCode only') }}</option>
+                </select>
+                <span class="help-block"><small>Generically, Octoprint @pause will pause the print, move the extruder aside a bit, then you can change the filament and press resume. A custom GCode can be added to run after or instead.</small></span>
+            </div>
+
+            <button class="btn btn-primary span4" data-bind="click: function() { showGCodeEditor(); }" title="{{ _('Custom GCode')|edq }}">Custom GCode</button>
+
+        </div>
+
+
+        <h6>{{ _('Limits') }}</h6>
+
+
+        <!-- No Extrusion Distance Limit -->
+        
+        <div class="control-group">
+            <label class="control-label">{{ _('No movement max extrusion distance:') }}</label>
+            <div class="controls">
+                <div class="input-append" data-toggle="tooltip" title="{{ _('The distance that is allowed to be passed without chaning the sensor status.') }}">
+                    <!--<input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: distanceDetectionDistance">-->
+                    <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_detection_distance">
+                    <span class="add-on">mm</span>
+                </div>
+                <span class="help-block"><small> Max allowed extrusion distance after no filament movement is detected by the sensor. Increase it if the filament bends or when using TPU.</i></small></span>
+            </div>
+        </div>
+
+
+        <!-- Grace timeout for No Extrusion Distance Limit -->
+        <div class="control-group">
+            <label class="control-label">{{ _('Grace period for <i>No movement max extrusion distance</i>:') }}</label>
+            <div class="controls">
+                <div class="input-append" data-toggle="tooltip" title="{{ _('This is the time duration of no movement to consider when pausing when the distance limit exceeds.') }}">
+                    <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_max_not_moving_after_dist">
+                    <span class="add-on">sec</span>
+                </div>
+                <span class="help-block"><small>Timeout after which the print is paused given that the distance limit has already reached. If the distance limit is reached but the last movement detected was under this duration, then the print wont be paused until then. Set it longer for long retractions.</small></span>
+            </div>
+        </div>
+
+
+
+        
+        <!-- Timeout regardless of Extrusion-->
+        <div class="control-group">
+            <label class="control-label">{{ _('No movement max timeout:') }}</label>
+            <div class="controls">
+                <div class="input-append" data-toggle="tooltip" title="{{ _('Maximum no movement timeout after which the print will be definitely paused.') }}">
+                    <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.filamentmotionsensor.motion_sensor_max_not_moving">
+                    <span class="add-on">sec</span>
+                </div>
+                <span class="help-block"><small>This is the ultimate timeout for no filament movement regardless of the extrusion distance. It's possible that the GCode retracts too much which prevents the distance limit to reach even when the filament is stuck. </small></span>
+            </div>
+        </div>
+
+        <!-- Initial delay-->
+        <div class="control-group">
+            <label class="control-label">{{ _('Initial wait:') }}</label>
+            <div class="controls">
+                <div class="input-append" data-toggle="tooltip" title="{{ _('Initial Wait time before the monitoring begins.') }}">
+                    <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.filamentmotionsensor.initial_delay">
+                    <span class="add-on">sec</span>
+                </div>
+                <span class="help-block"><small>Wait time after the print has started. Set it roughly around how long the bed takes to heat up. It can be set to 0 for most slicers that don't do any starting antics. Monitoring begins after the Z-axis moves and the extruder extrudes a little, but if the GCode extrudes before heating then you need to add a delay here.</small></span>
+            </div>
+        </div>
+
+        <!-- Heatres Timeout-->
+        <div class="control-group">
+            <label class="control-label">{{ _('Heaters timeout:') }}</label>
+            <div class="controls">
+                <div class="input-append" data-toggle="tooltip" title="{{ _('Turn off heaters after a paused print is not resumed for this many minutes.') }}">
+                    <input type="number" step="any" min="0" class="input-mini text-right" data-bind="value: settingsViewModel.settings.plugins.filamentmotionsensor.heaters_timeout">
+                    <span class="add-on">min</span>
+                </div>
+                <span class="help-block"><small>Minutes to wait after @pause before turning off the hotend and hotbed. This timeout only works when the @puase command is initiated by this plugin. <b>You will have to set the temperatures again before resuming after timeout</b>. Set it to -1 to disable it.</small></span>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+
+
+
+<!-- Connection test modal -->
+<div id="settings_plugin_filamentmotionsensor_connectiontest" class="modal hide fade">
+    <div class="modal-header">
+        <h3>{{_('Connection Test') }}</h3>
+    </div>
+    <div class="modal-body">
+        <!-- <pre id="settings_plugin_pluginmanager_workingdialog_output" class="pre-scrollable pre-output" style="height: 170px" data-bind="foreach: loglines"><span data-bind="text: line, css: {stdout: stream == 'stdout', stderr: stream == 'stderr', call: stream == 'call', message: stream == 'message', error: stream == 'error'}"></span></pre> -->
+        <div class="control-group">
+            <div class="alert alert-primary">Press start and then move the filament manually.</div>
+            <div class="controls form-inline">
+                <label class="control-label">{{ _('Filament status:') }} <span data-bind="text: isFilamentMoving"></span></label>
+            </div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary" data-bind="enable: !isConnectionTestRunning(), click: function() { startConnectionTest(); }" title="{{ _('Start sensor connection test')|edq }}">Start Test</button>
+            <button class="btn btn-primary" data-bind="enable: isConnectionTestRunning(), click: function() { stopConnectionTest(); }" title="{{ _('Stop sensor connection test')|edq }}">Stop Test</button>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <!--<button class="btn" data-dismiss="modal" data-bind="enable: !$root.working()" aria-hidden="true">{{ _('Close') }}</button>-->
+        <button class="btn" data-dismiss="modal" data-bind="click: function() {  }" aria-hidden="true">{{ _('Close') }}</button>
+    </div>
+</div>
+
+
+
+
+<!-- Gcode edit modal -->
+<div id="settings_plugin_filamentmotionsensor_customGCodeDialog" class="modal hide fade">
+    <div class="modal-header">
+        <h3>{{_('Custom GCode Commands') }}</h3>
+    </div>
+    <div class="modal-body">
+        <!-- <pre id="settings_plugin_pluginmanager_workingdialog_output" class="pre-scrollable pre-output" style="height: 170px" data-bind="foreach: loglines"><span data-bind="text: line, css: {stdout: stream == 'stdout', stderr: stream == 'stderr', call: stream == 'call', message: stream == 'message', error: stream == 'error'}"></span></pre> -->
+
+
+        <div class="control-group">
+            <span class="help-block alert alert-primary"><small>These GCode commands will be sent to the printer after Octoprint pause or cancel. In Custom-GCode-only mode, Octorprint might not pause. Be weary of what you write here. Leave it empty to disable it. </small></span>
+
+             <div class="controls">
+             <textarea id="filamentmotionsensor_custom_gcode" name="filamentmotionsensor_custom_gcode" rows="12" cols="100"></textarea>
+            </div>
+
+            
+        </div>
+        
+        <div class="btn-group">
+
+            <button class="btn btn-danger"  id="filamentmotionsensor_test_gcode" name="filamentmotionsensor_test_gcode"  data-bind="enable: enableGCodeTesting, click: function() { test_custom_gcode(); }"  title="{{ _('Send these commands to the printer now')|edq }}">Test now</button>
+        
+        </div>
+            
+        <div class="btn-group">
+            <button class="btn btn-primary" id="filamentmotionsensor_save_gcode" name="filamentmotionsensor_save_gcode" data-bind="click: function() { save_custom_gcode(); }" title="{{ _('Save the edits')|edq }}">Save</button>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <!--<button class="btn" data-dismiss="modal" data-bind="enable: !$root.working()" aria-hidden="true">{{ _('Close') }}</button>-->
+        <button class="btn" data-dismiss="modal" data-bind="click: function() {  }" aria-hidden="true">{{ _('Close') }}</button>
+    </div>
+</div>

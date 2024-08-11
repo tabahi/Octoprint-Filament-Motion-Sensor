@@ -5,21 +5,21 @@
 
 # The plugin's identifier, has to be unique
 from setuptools import setup
-plugin_identifier = "smartfilamentsensor"
+plugin_identifier = "filamentmotionsensor"
 
 # The plugin's python package, should be "octoprint_<plugin identifier>", has to be unique
-plugin_package = "octoprint_smart_filament_sensor"
+plugin_package = "octoprint_filamentmotionsensor"
 
 # The plugin's human readable name. Can be overwritten within OctoPrint's internal data via __plugin_name__ in the
 # plugin module
-plugin_name = "Octoprint-Smart-Filament-Sensor-v2"
+plugin_name = "Octoprint-Filament Motion Sensor"
 
 # The plugin's version. Can be overwritten within OctoPrint's internal data via __plugin_version__ in the plugin module
 plugin_version = "2.1"
 
 # The plugin's description. Can be overwritten within OctoPrint's internal data via __plugin_description__ in the plugin
 # module
-plugin_description = "A plugin to directly add Smart Filament Sensors like BigTreeTech Smart Filament Sensor to Octoprint."
+plugin_description = "A plugin to connect a filament motion sensor directly to RaspberryPi's GPIO pin.."
 
 # The plugin's author. Can be overwritten within OctoPrint's internal data via __plugin_author__ in the plugin module
 plugin_author = "Tabahi"
@@ -28,13 +28,13 @@ plugin_author = "Tabahi"
 plugin_author_email = "tabahi@duck.com"
 
 # The plugin's homepage URL. Can be overwritten within OctoPrint's internal data via __plugin_url__ in the plugin module
-plugin_url = "https://github.com/tabahi/Octoprint-Smart-Filament-Sensor"
+plugin_url = "https://github.com/tabahi/Octoprint-Filament-Motion-Sensor"
 
 # The plugin's license. Can be overwritten within OctoPrint's internal data via __plugin_license__ in the plugin module
 plugin_license = "AGPLv3"
 
 # Any additional requirements besides OctoPrint should be listed here
-plugin_requires = ['gpiod']
+plugin_requires = ['gpiod==2.2.1']
 
 # --------------------------------------------------------------------------------------------------------------------
 # More advanced options that you usually shouldn't have to touch follow after this point
@@ -42,7 +42,7 @@ plugin_requires = ['gpiod']
 
 # Additional package data to install for this plugin. The subfolders "templates", "static" and "translations" will
 # already be installed automatically if they exist.
-plugin_additional_data = []
+plugin_additional_data = ["data/custom_ending.gcode"]
 
 # Any additional python packages you need to install with your plugin that are not contains in <plugin_package>.*
 plugin_addtional_packages = []

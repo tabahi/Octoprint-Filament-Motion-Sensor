@@ -13,9 +13,10 @@
    </div>
    
     <div class="controls form-inline">
-       <label class="control-label" data-bind="visible: 1">{{ _('Status:') }} <span data-bind="text: StatusFlagText"></span></label>
+       <label class="control-label" data-bind="visible: 1">{{ _('Status:') }} <span data-bind="text: StatusFlag"></span> <small> <span data-bind="text: StatusFlagText"></span></small></label>
     </div>
-   <div class="controls form-inline">
-       <label class="control-label" data-bind="visible: isConnectionTestRunningBool">{{ _('Test is running:') }} <span data-bind="text: isConnectionTestRunningBool"></span></label>
+   
+    <div class="controls form-inline">
+       <label class="control-label" data-bind="visible: isConnectionTestRunningBool">{{ _('Test running:') }} <span data-bind="text: isConnectionTestRunningBool"></span></label>
    </div>
 </div>

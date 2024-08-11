@@ -1,6 +1,6 @@
 import json
 
-class SmartFilamentSensorDetectionData(object):
+class FilamentMotionSensorDetectionData(object):
     @property
     def remaining_distance(self):
         return self._remaining_distance
@@ -11,12 +11,12 @@ class SmartFilamentSensorDetectionData(object):
         self.callbackUpdateUI()
 
     @property
-    def print_status_flag(self):
-        return self._print_status_flag
+    def flag(self):
+        return self._flag
 
-    @print_status_flag.setter
-    def print_status_flag(self, value):
-        self._print_status_flag = value
+    @flag.setter
+    def flag(self, value):
+        self._flag = value
         self.callbackUpdateUI()
 
     @property
@@ -78,7 +78,7 @@ class SmartFilamentSensorDetectionData(object):
         self.callbackUpdateUI = pCallback
 
         # Default values
-        self._print_status_flag = -1
+        self._flag = -1
         self._lastE = -1
         self._currentE = -1
         self._last_motion_detected = ""
