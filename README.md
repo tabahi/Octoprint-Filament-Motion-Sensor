@@ -13,7 +13,6 @@ Main updates - August 2024:
 - Removed RPi.GPIO requirements, replaced it with libgpiod.
 - Only one mode that uses both the distance and the timeout together.
 
-
 ## Required sensor
 
 To use this plugin a Filament Sensor needs to be sending a toggling digital signal (0-1-0...) during filament movement.
@@ -33,7 +32,16 @@ To use this plugin a Filament Sensor needs to be sending a toggling digital sign
 * Install via the bundled [Plugin Manager](https://github.com/foosel/OctoPrint/wiki/Plugin:-Plugin-Manager).
 * Manual install: Scroll down the "Get more" menu in Plugin Manager, Use this URL: https://github.com/tabahi/Octoprint-Smart-Filament-Sensor/archive/master.zip
 
+
 After installation a restart of Octoprint is required.
+
+
+### Installation Requirements
+- Python>3.8
+- [gpiod>=2.0.2](https://pypi.org/project/gpiod/) installed in Octoprint environment.
+
+It has been tested with RPi5 running [octoprint_deploy 1.0.11](https://github.com/paukstelis/octoprint_deploy) and Zero2w running Octopi1.0 image. You are welcome to raise issues for untested environments.
+
 
 ## Configuration
 ### GPIO Pin
