@@ -1,15 +1,17 @@
 # Octoprint-Filament-Motion-Sensor
 
 
-Main updates:
-- Removed RPi.GPIO requirements, replaced it with libgpiod.
-- Only one mode that uses both the distance and the timeout together.
 
 
 An [OctoPrint](http://octoprint.org/) plugin for filament motion sensor connected directly to RaspberryPi's GPIO pin.
 
 
  This new version supports the latest Raspbian OS and RPi5. This plugin revision is still pretty new and can have issues with untested environments. Try using [other forks](https://github.com/hviet17/Octoprint-Smart-Filament-Sensor) if this one doesn't work especially on RPi3 and older. Initial work based on the [Octoprint-Filament-Reloaded](https://github.com/kontakt/Octoprint-Filament-Reloaded) plugin by kontakt,  [Octoprint-Filament-Revolutions](https://github.com/RomRider/Octoprint-Filament-Revolutions) plugin by RomRider, and is a fork of  [Octoprint-Smart-Filament-Sensor](https://github.com/Royrdan/Octoprint-Smart-Filament-Sensor) by Royrdan.
+
+
+Main updates - August 2024:
+- Removed RPi.GPIO requirements, replaced it with libgpiod.
+- Only one mode that uses both the distance and the timeout together.
 
 
 ## Required sensor
