@@ -22,7 +22,7 @@ plugin_version = "2.1"
 plugin_description = "A plugin to connect a filament motion sensor directly to RaspberryPi's GPIO pin.."
 
 # The plugin's author. Can be overwritten within OctoPrint's internal data via __plugin_author__ in the plugin module
-plugin_author = "Tabahi"
+plugin_author = "tabahi"
 
 # The plugin's author's mail address.
 plugin_author_email = "tabahi@duck.com"
