@@ -1,6 +1,5 @@
 # Octoprint-Filament-Motion-Sensor
 
-Updating... 2024-08-11
 
 Main updates:
 - Removed RPi.GPIO requirements, replaced it with libgpiod.
@@ -20,7 +19,7 @@ To use this plugin a Filament Sensor needs to be sending a toggling digital sign
 - You can also make one yourself using a slotted wheel, an LED, and a photo-diode. Connect the output of the photo-diode to a GPIO pin of RPi. Make sure to not input more than 3.3V to raspberry pi. Here is an example (rather complicated) model by [Ludwig3D on Thingiverse](https://www.thingiverse.com/thing:3071723).
 
 ## Features
-*  Detects filament jams, runrouts, clogs, spool tangles and pause the print automatically.
+*  Detects filament jams, runrouts, clogs, spool tangles and pauses the print automatically.
 * Uses highly responsive GPIO interrupts.
 * Can respond within a second of no-filament-motion.
 *  Configuration limits and timeouts for pausing.
@@ -30,7 +29,7 @@ To use this plugin a Filament Sensor needs to be sending a toggling digital sign
 ## Installation
 
 * Install via the bundled [Plugin Manager](https://github.com/foosel/OctoPrint/wiki/Plugin:-Plugin-Manager).
-* Manual install: Scroll down the "Get more" menu in Plugin Manager, Use this URL: https://github.com/tabahi/Octoprint-Smart-Filament-Sensor-V2/archive/master.zip
+* Manual install: Scroll down the "Get more" menu in Plugin Manager, Use this URL: https://github.com/tabahi/Octoprint-Smart-Filament-Sensor/archive/master.zip
 
 After installation a restart of Octoprint is required.
 
@@ -42,7 +41,7 @@ After installation a restart of Octoprint is required.
 ### Pausing Limits
 A print can be paused due to two limits when the filament is not moving:
 
-1. Extrusion distance limit after jam. It's best to set between 5mm (slow) and 20mm (fast) depending on the print speed. With retractions, the filament might go back and forth triggering this limit therefore a grace-period can be set to override this limit for a couple of seconds.
+1. Extrusion distance limit after jam. It's best to set between 5mm (slow) and 20mm (fast) depending on the print speed. With retractions, the filament might not move much triggering this limit therefore a grace-period can be set to override this limit for a couple of seconds.
 2. Timeout after jam. Seconds to wait after no-filament-motion before pausing. 5s for very fast print, 120s for very slow prints.
 
 ### Octoprint - Firmware & Protocol
@@ -63,5 +62,5 @@ The custom GCode managed by the plugin is only run when a print is paused due to
 * Support of multiple sensors for multiextruders. Depending on the demand.
 
 ## Contact
-* [Issues](https://github.com/tabahi/Octoprint-Smart-Filament-Sensor-V2/issues)
+* [Issues](https://github.com/tabahi/Octoprint-Smart-Filament-Sensor/issues)
 * [Octoprint Discord](https://discord.octoprint.org/)

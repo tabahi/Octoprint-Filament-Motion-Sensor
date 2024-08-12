@@ -592,7 +592,7 @@ class FilamentMotionSensor(octoprint.plugin.StartupPlugin,
 
                 # version check: github repository
                 type="github_release",
-                user="Tabahi",
+                user="tabahi",
                 repo="Octoprint-Filament-Motion-Sensor ",
                 current=self._plugin_version,
 
