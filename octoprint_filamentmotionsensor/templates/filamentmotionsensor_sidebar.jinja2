@@ -3,8 +3,8 @@
    
    
     <div class="controls form-inline">
-       <label class="control-label" data-bind="visible: 1">{{ _('<i class="fa fa-circle-o-notch fa-spin" data-bind="visible: isFilamentMoving"></i>
-      <i class="fa fa-solid fa-pause" data-bind="hidden: isFilamentMoving"></i>') }} <small> <span data-bind="text: StatusFlagText"></span></small></label>
+       <label class="control-label" data-bind="visible: 1"> <small> <span data-bind="text: StatusFlagText"></span></small> {{ _('<i class="fa fa-sun fa-spin" data-bind="visible: isFilamentMoving" title="Moving right now."></i>
+      <i class="fa fa-solid fa-pause-circle-o" data-bind="hidden: isFilamentMoving"  title="Not movement right now."></i>') }}</label>
     </div>
 
    <table>
