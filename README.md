@@ -17,7 +17,13 @@ Main updates - August 2024:
 
 To use this plugin a Filament Sensor needs to be sending a toggling digital signal (0-1-0...) during filament movement.
 - A ready-made sensor can be used such as BIGTREETECH Smart Filament Sensor.
-- You can also make one yourself using a slotted wheel, an LED, and a photo-diode. Connect the output of the photo-diode to a GPIO pin of RPi. Make sure to not input more than 3.3V to raspberry pi. Here is an example (rather complicated) model by [Ludwig3D on Thingiverse](https://www.thingiverse.com/thing:3071723).
+- You can also make one yourself using a slotted wheel. Put an an LED on one side and a photodiode on the other side. Connect the output of the photodiode to a GPIO pin of RPi. Make sure to not input more than 3.3V to raspberry pi. The light from the LED (or IR LED) will trigger the photodiode (or IR receiver LED) through the slots when the wheel turns. Here is an example model by [WindoAC on Thingiverse](https://www.thingiverse.com/thing:3067904).
+
+
+![BTT smart sensor wiring](./BTT_smart_sensor.jpg)
+
+![Slotted wheel, IR diode and IR sensor prototype](slotted_wheel_IR_diode_animation.gif)
+
 
 ## Features
 *  Detects filament jams, runrouts, clogs, spool tangles and pauses the print automatically.

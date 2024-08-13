@@ -1,7 +1,7 @@
 '''
 Run this script to test your filament motion sensor's input manually. Run it with the Octorprint environment:
 
-/home/pi/oprint/bin/python3.9  /home/pi/oprint/lib/python3.9/site-packages/filamentmotionsensor/sensor_gpiod_check.py
+/home/pi/oprint/bin/python3.9  /home/pi/oprint/lib/python3.9/site-packages/octoprint_filamentmotionsensor/sensor_gpiod_check.py
 
 ~oprint might be at a different path, and python3.9 could be python3.11 or some newer version.
 
