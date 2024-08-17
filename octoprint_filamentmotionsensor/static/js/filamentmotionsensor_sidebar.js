@@ -60,7 +60,26 @@ var status_flags = {
             var seconds_gone_by = Math.round((new Date() - (new Date((message["_last_motion_detected"] * 1000)))) / 1000);
             if (seconds_gone_by<0) seconds_gone_by = 0;
             if (seconds_gone_by>99999)  self.lastMotionDetected("Never");
-            else self.lastMotionDetected(seconds_gone_by.toString() + "s ago");
+            else
+            {
+                if (seconds_gone_by < 60)
+                {
+                    self.lastMotionDetected(seconds_gone_by.toString() + "s ago");
+                    $("#time_gone_by").attr('title',  "moved seconds ago").tooltip('fixTitle')
+                }
+                else if (seconds_gone_by < 3600)
+                {
+                    self.lastMotionDetected((Math.floor(seconds_gone_by/60).toString()) + "m ago");
+                    $("#time_gone_by").attr('title',  (new Date((message["_last_motion_detected"] * 1000))).toLocaleTimeString()).tooltip('fixTitle')
+                }
+                
+                else
+                {
+                    self.lastMotionDetected((Math.floor(seconds_gone_by/3600).toString()) + "h ago");
+                    $("#time_gone_by").attr('title',  (new Date((message["_last_motion_detected"] * 1000))).toLocaleTimeString()).tooltip('fixTitle')
+                }
+            }
+            
 
             if(message["_filament_moving"] == true){
                 self.isFilamentMoving(true);
