@@ -1,6 +1,6 @@
 # Octoprint-Filament-Motion-Sensor
 
-
+Note: Consider this fork abandoned. As I have moved on to a different printer that doesn't need octoprint, meanwhile octoprint has changed a little bit which may cause issues for this plugin. Please help collaborate if you can fix the issues.
 
 
 An [OctoPrint](http://octoprint.org/) plugin for filament motion sensor connected directly to RaspberryPi's GPIO pin.
